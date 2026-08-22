@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Trash2, Search } from 'lucide-react'
+import { Trash2, Search } from 'lucide-react'
 import { api } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
 
@@ -122,14 +122,14 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
     })
   }
 
-  const inputCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const inputCls = 'field-input'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Header fields */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Supplier *</label>
+          <label className="field-label">Supplier *</label>
           <select className={inputCls} value={supplierId} onChange={e => setSupplierId(e.target.value)} required>
             <option value="">Select supplier...</option>
             {(suppliers?.data ?? suppliers ?? []).map((s: any) => (
@@ -138,18 +138,18 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Purchase Date</label>
+          <label className="field-label">Purchase Date</label>
           <input type="date" className={inputCls} value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Supplier Invoice #</label>
+          <label className="field-label">Supplier Invoice #</label>
           <input className={inputCls} value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Optional" />
         </div>
       </div>
 
       {/* Medicine search */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Add Medicine</label>
+        <label className="field-label">Add Medicine</label>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -160,7 +160,7 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
             placeholder="Search medicine to add..."
           />
           {showMedDrop && medSearch.length >= 2 && medResults && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto" style={{ border: '1px solid var(--rule)' }}>
               {medResults.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-gray-400">No results</p>
               ) : (
@@ -169,7 +169,7 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
                     key={m.id}
                     type="button"
                     onClick={() => addItem(m)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-50 last:border-0"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 border-b border-gray-50 last:border-0"
                   >
                     {m.brandName} <span className="text-xs text-gray-400">{m.strength}</span>
                   </button>
@@ -182,24 +182,24 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
 
       {/* Items table */}
       {items.length > 0 && (
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+        <div className="overflow-x-auto card">
           <table className="w-full text-xs">
-            <thead className="bg-gray-50">
+            <thead>
               <tr>
                 {['Medicine', 'Batch #', 'Expiry', 'P.Rate', 'S.Rate', 'Qty', 'Free', 'Disc%', 'Tax%', 'Total', ''].map(h => (
-                  <th key={h} className="px-2 py-2 text-left text-gray-500 uppercase font-semibold whitespace-nowrap">{h}</th>
+                  <th key={h} className="whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => (
-                <tr key={idx} className="border-t border-gray-100">
+                <tr key={idx}>
                   <td className="px-2 py-1.5 font-medium text-gray-700 whitespace-nowrap">{item.medicineName}</td>
                   {(['batchNumber', 'expiryDate'] as const).map(f => (
                     <td key={f} className="px-2 py-1.5">
                       <input
                         type={f === 'expiryDate' ? 'date' : 'text'}
-                        className="border border-gray-200 rounded px-1.5 py-1 w-24 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="border rounded px-1.5 py-1 w-24 text-xs focus:outline-none" style={{ borderColor: 'var(--rule)', background: 'var(--paper)' }}
                         value={item[f]}
                         onChange={e => updateItem(idx, f, e.target.value)}
                       />
@@ -209,7 +209,7 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
                     <td key={f} className="px-2 py-1.5">
                       <input
                         type="number"
-                        className="border border-gray-200 rounded px-1.5 py-1 w-16 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="border rounded px-1.5 py-1 w-16 text-xs text-right focus:outline-none" style={{ borderColor: 'var(--rule)', background: 'var(--paper)' }}
                         value={item[f]}
                         min={0}
                         onChange={e => updateItem(idx, f, Number(e.target.value))}
@@ -233,7 +233,7 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Amount Paid</label>
+            <label className="field-label">Amount Paid</label>
             <input
               type="number"
               className={inputCls}
@@ -243,11 +243,11 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+            <label className="field-label">Notes</label>
             <textarea className={inputCls} value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
           </div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm self-end">
+        <div className="rounded-lg p-3 space-y-1 text-sm self-end" style={{ background: 'var(--paper)', border: '1px solid var(--rule)' }}>
           <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>Rs. {subtotal.toFixed(2)}</span></div>
           <div className="flex justify-between text-gray-500"><span>Discount</span><span className="text-red-500">- Rs. {totalDiscount.toFixed(2)}</span></div>
           <div className="flex justify-between text-gray-500"><span>Tax</span><span>Rs. {totalTax.toFixed(2)}</span></div>
@@ -256,13 +256,13 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">
           Cancel
         </button>
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          className="btn btn-primary"
         >
           {mutation.isPending && <Spinner size="sm" />}
           Save Purchase

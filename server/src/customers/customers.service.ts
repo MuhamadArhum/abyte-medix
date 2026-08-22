@@ -18,10 +18,11 @@ export class CustomersService {
         { phone: { contains: search } },
       ]
     }
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
       this.prisma.customer.count({ where }),
     ])
+    return { data, total }
   }
 
   async findOne(id: number) {

@@ -29,7 +29,7 @@ export class SalesController {
     return this.sales.getDailySummary(date)
   }
 
-  // FR-9.7 — Hold/Resume
+  // Hold / Resume
   @Post('hold')
   holdSale(@Body() body: any, @CurrentUser() user: any) {
     return this.sales.holdSale({ ...body, userId: user.id })
@@ -42,7 +42,23 @@ export class SalesController {
 
   @Delete('held/:id')
   discardHeldSale(@Param('id') id: string) {
-    return this.sales.discardHeldSale(+id)
+    return this.sales.discardDraft(+id)
+  }
+
+  // Quotations
+  @Post('quotations')
+  saveQuotation(@Body() body: any, @CurrentUser() user: any) {
+    return this.sales.saveQuotation({ ...body, userId: user.id })
+  }
+
+  @Get('quotations')
+  getQuotations() {
+    return this.sales.getQuotations()
+  }
+
+  @Delete('quotations/:id')
+  deleteQuotation(@Param('id') id: string) {
+    return this.sales.discardDraft(+id)
   }
 
   @Get(':id')

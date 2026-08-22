@@ -11,8 +11,13 @@ export class InventoryController {
   constructor(private inventory: InventoryService) {}
 
   @Get()
-  getStock() {
-    return this.inventory.getStock()
+  getStock(
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('search') search: string,
+    @Query('filter') filter: string,
+  ) {
+    return this.inventory.getStock(Number(page) || 1, Number(limit) || 25, search ?? '', filter ?? '')
   }
 
   @Get('movements')

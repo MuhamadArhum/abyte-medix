@@ -28,7 +28,7 @@ export class MedicinesService {
     })
   }
 
-  findAll(page = 1, limit = 50, search?: string) {
+  async findAll(page = 1, limit = 50, search?: string) {
     const skip = (page - 1) * limit
     const where = search
       ? {
@@ -40,7 +40,7 @@ export class MedicinesService {
         }
       : {}
 
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.medicine.findMany({
         where,
         include: { category: true, manufacturer: true },
@@ -50,6 +50,7 @@ export class MedicinesService {
       }),
       this.prisma.medicine.count({ where }),
     ])
+    return { data, total }
   }
 
   async findOne(id: number) {

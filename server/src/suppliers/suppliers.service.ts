@@ -18,10 +18,11 @@ export class SuppliersService {
         { phone: { contains: search } },
       ]
     }
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.supplier.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
       this.prisma.supplier.count({ where }),
     ])
+    return { data, total }
   }
 
   async findOne(id: number) {

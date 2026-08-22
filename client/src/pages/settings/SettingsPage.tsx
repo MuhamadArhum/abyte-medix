@@ -18,9 +18,9 @@ interface Settings {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 className="font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">{title}</h3>
-      <div className="space-y-3">{children}</div>
+    <div style={{ background: '#FFFFFF', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: 20 }}>
+      <h3 style={{ fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 14, color: 'var(--ink)', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--rule)' }}>{title}</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
     </div>
   )
 }
@@ -64,90 +64,98 @@ export default function SettingsPage() {
     mutation.mutate(payload)
   }
 
-  const inputCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const inputCls: React.CSSProperties = {
+    background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)',
+    padding: '9px 12px', fontSize: 13, color: 'var(--ink)', outline: 'none',
+    width: '100%', fontFamily: 'var(--font-sans)',
+  }
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><Spinner /></div>
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spinner /></div>
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Settings</h2>
-        <button
-          onClick={handleSave}
-          disabled={mutation.isPending}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-        >
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 19, color: 'var(--ink)' }}>Settings</h1>
+          <div style={{ fontSize: 12.5, color: 'var(--steel)', marginTop: 2 }}>Admin-only store configuration</div>
+        </div>
+        <button onClick={handleSave} disabled={mutation.isPending} style={{
+          background: '#17B978', color: '#fff', border: 'none', borderRadius: 'var(--radius)',
+          padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)',
+          opacity: mutation.isPending ? 0.7 : 1,
+        }}>
           {mutation.isPending && <Spinner size="sm" />}
           Save Settings
         </button>
       </div>
 
-      <div className="max-w-2xl space-y-6">
+      <div style={{ maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Section title="Store Information">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Store Name</label>
-            <input className={inputCls} value={form.store_name ?? ''} onChange={e => set('store_name', e.target.value)} placeholder="AbyteMedix" />
+            <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Store Name</label>
+            <input style={inputCls} value={form.store_name ?? ''} onChange={e => set('store_name', e.target.value)} placeholder="AbyteMedix" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Store Address</label>
-            <textarea className={inputCls} value={form.store_address ?? ''} onChange={e => set('store_address', e.target.value)} rows={2} />
+            <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Store Address</label>
+            <textarea style={inputCls} value={form.store_address ?? ''} onChange={e => set('store_address', e.target.value)} rows={2} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Store Phone</label>
-            <input className={inputCls} value={form.store_phone ?? ''} onChange={e => set('store_phone', e.target.value)} />
+            <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Store Phone</label>
+            <input style={inputCls} value={form.store_phone ?? ''} onChange={e => set('store_phone', e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Store Logo URL</label>
-            <input className={inputCls} value={form.store_logo ?? ''} onChange={e => set('store_logo', e.target.value)} placeholder="https://..." />
+            <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Store Logo URL</label>
+            <input style={inputCls} value={form.store_logo ?? ''} onChange={e => set('store_logo', e.target.value)} placeholder="https://..." />
           </div>
         </Section>
 
         <Section title="Invoice Settings">
-          <div className="grid grid-cols-2 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Invoice Prefix</label>
-              <input className={inputCls} value={form.invoice_prefix ?? ''} onChange={e => set('invoice_prefix', e.target.value)} placeholder="INV-" />
+              <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Invoice Prefix</label>
+              <input style={inputCls} value={form.invoice_prefix ?? ''} onChange={e => set('invoice_prefix', e.target.value)} placeholder="INV-" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Currency</label>
-              <input className={inputCls} value={form.currency ?? ''} onChange={e => set('currency', e.target.value)} placeholder="Rs." />
+              <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Currency</label>
+              <input style={inputCls} value={form.currency ?? ''} onChange={e => set('currency', e.target.value)} placeholder="Rs." />
             </div>
           </div>
         </Section>
 
         <Section title="Alert Thresholds">
-          <div className="grid grid-cols-2 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Low Stock Threshold</label>
+              <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Low Stock Threshold</label>
               <input
                 type="number"
-                className={inputCls}
+                style={inputCls}
                 value={form.low_stock_threshold ?? ''}
                 onChange={e => set('low_stock_threshold', e.target.value)}
                 min={0}
               />
-              <p className="text-xs text-gray-400 mt-1">Alert when stock falls below this level</p>
+              <p style={{ fontSize: 11, color: 'var(--steel)', marginTop: 4 }}>Alert when stock falls below this level</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Expiry Alert Days</label>
+              <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Expiry Alert Days</label>
               <input
                 type="number"
-                className={inputCls}
+                style={inputCls}
                 value={form.expiry_alert_days ?? ''}
                 onChange={e => set('expiry_alert_days', e.target.value)}
                 min={1}
               />
-              <p className="text-xs text-gray-400 mt-1">Alert when medicine expires within these days</p>
+              <p style={{ fontSize: 11, color: 'var(--steel)', marginTop: 4 }}>Alert when medicine expires within these days</p>
             </div>
           </div>
         </Section>
 
         <Section title="Backup">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Backup Path</label>
-            <input className={inputCls} value={form.backup_path ?? ''} onChange={e => set('backup_path', e.target.value)} placeholder="C:/backups/" />
+            <label style={{ fontSize: 11, color: 'var(--steel)', fontWeight: 600, display: 'block', marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Backup Path</label>
+            <input style={inputCls} value={form.backup_path ?? ''} onChange={e => set('backup_path', e.target.value)} placeholder="C:/backups/" />
           </div>
         </Section>
       </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Pill } from 'lucide-react'
 import { api } from '../../api/client'
 import { useAuthStore } from '../../store/auth.store'
 
@@ -27,45 +28,80 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">AbyteMedix</h1>
-          <p className="text-sm text-gray-500 mt-1">Medical Store Management</p>
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'var(--blueprint-deep)',
+    }}>
+      <div style={{
+        width: 380, background: 'var(--paper-light)',
+        border: '1px solid var(--rule)',
+        padding: '36px 32px 32px',
+        boxShadow: '0 16px 48px rgba(8,27,48,0.35)',
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 30 }}>
+          <div style={{
+            width: 44, height: 44, background: 'var(--orange)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px',
+          }}>
+            <Pill size={20} color="#fff" />
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 22,
+            color: 'var(--blueprint)', textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            AbyteMedix
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--steel)',
+            textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4,
+          }}>
+            Medical Store Management
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="field-group">
+            <label className="field-label">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
               autoFocus
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="admin"
+              className="field-input"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <div className="field-group">
+            <label className="field-label">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+              className="field-input"
             />
           </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && (
+            <div style={{
+              background: 'var(--color-danger-bg)', border: '1px solid var(--red-risk)',
+              borderRadius: 'var(--radius)', padding: '8px 12px',
+              fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--red-risk)',
+            }}>{error}</div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="btn btn-primary"
+            style={{ width: '100%', justifyContent: 'center', padding: '11px', fontSize: 13, marginTop: 4 }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
       </div>

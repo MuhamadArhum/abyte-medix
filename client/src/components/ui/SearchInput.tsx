@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 import { Search } from 'lucide-react'
 
 interface SearchInputProps {
@@ -6,34 +6,31 @@ interface SearchInputProps {
   onChange: (val: string) => void
   placeholder?: string
   debounce?: number
+  inputRef?: RefObject<HTMLInputElement | null>
 }
 
-export default function SearchInput({
-  value,
-  onChange,
-  placeholder = 'Search...',
-  debounce = 300,
-}: SearchInputProps) {
+export default function SearchInput({ value, onChange, placeholder = 'Search…', debounce = 300, inputRef }: SearchInputProps) {
   const [local, setLocal] = useState(value)
 
-  useEffect(() => {
-    setLocal(value)
-  }, [value])
-
+  useEffect(() => { setLocal(value) }, [value])
   useEffect(() => {
     const t = setTimeout(() => onChange(local), debounce)
     return () => clearTimeout(t)
   }, [local, debounce, onChange])
 
   return (
-    <div className="relative">
-      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <div style={{ position: 'relative', width: 280 }}>
+      <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--steel)' }} />
       <input
-        type="text"
-        value={local}
-        onChange={(e) => setLocal(e.target.value)}
-        placeholder={placeholder}
-        className="border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ref={inputRef}
+        type="text" value={local} onChange={(e) => setLocal(e.target.value)} placeholder={placeholder}
+        style={{
+          width: '100%', background: '#fff', border: '1px solid var(--rule)', borderRadius: 'var(--radius)',
+          padding: '7px 12px 7px 32px', fontSize: 12.5, color: 'var(--ink)',
+          outline: 'none', fontFamily: 'var(--font-sans)',
+        }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--orange)' }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--rule)' }}
       />
     </div>
   )

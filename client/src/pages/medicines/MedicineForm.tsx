@@ -85,75 +85,75 @@ export default function MedicineForm({ initialData, onSuccess, onCancel }: Props
     })
   }
 
-  const inputCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const inputCls = 'field-input'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Product Code</label>
+          <label className="field-label">Product Code</label>
           <input className={inputCls} value={form.productCode} onChange={e => set('productCode', e.target.value)} placeholder="Auto-generated" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Barcode</label>
+          <label className="field-label">Barcode</label>
           <input className={inputCls} value={form.barcode} onChange={e => set('barcode', e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Brand Name *</label>
+          <label className="field-label">Brand Name *</label>
           <input className={inputCls} value={form.brandName} onChange={e => set('brandName', e.target.value)} required />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Generic Name</label>
+          <label className="field-label">Generic Name</label>
           <input className={inputCls} value={form.genericName} onChange={e => set('genericName', e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Strength</label>
+          <label className="field-label">Strength</label>
           <input className={inputCls} value={form.strength} onChange={e => set('strength', e.target.value)} placeholder="e.g. 500mg" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Dosage Form</label>
+          <label className="field-label">Dosage Form</label>
           <select className={inputCls} value={form.dosageForm} onChange={e => set('dosageForm', e.target.value)}>
             <option value="">Select...</option>
             {DOSAGE_FORMS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Pack Size</label>
+          <label className="field-label">Pack Size</label>
           <input type="number" className={inputCls} value={form.packSize} onChange={e => set('packSize', Number(e.target.value))} min={1} />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Unit</label>
+          <label className="field-label">Unit</label>
           <input className={inputCls} value={form.unit} onChange={e => set('unit', e.target.value)} placeholder="Strip, Bottle..." />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Tax Rate %</label>
+          <label className="field-label">Tax Rate %</label>
           <input type="number" className={inputCls} value={form.taxRate} onChange={e => set('taxRate', Number(e.target.value))} min={0} max={100} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Reorder Level</label>
+          <label className="field-label">Reorder Level</label>
           <input type="number" className={inputCls} value={form.reorderLevel} onChange={e => set('reorderLevel', Number(e.target.value))} min={0} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+          <label className="field-label">Category</label>
           <select className={inputCls} value={form.categoryId} onChange={e => set('categoryId', e.target.value)}>
             <option value="">None</option>
             {(categories ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Manufacturer</label>
+          <label className="field-label">Manufacturer</label>
           <select className={inputCls} value={form.manufacturerId} onChange={e => set('manufacturerId', e.target.value)}>
             <option value="">None</option>
             {(manufacturers ?? []).map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -167,19 +167,19 @@ export default function MedicineForm({ initialData, onSuccess, onCancel }: Props
           id="prescReq"
           checked={form.prescriptionRequired}
           onChange={e => set('prescriptionRequired', e.target.checked)}
-          className="w-4 h-4 text-blue-600"
+          className="w-4 h-4"
         />
         <label htmlFor="prescReq" className="text-sm text-gray-700">Prescription Required</label>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">
           Cancel
         </button>
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          className="btn btn-primary disabled:opacity-50"
         >
           {mutation.isPending && <Spinner size="sm" />}
           {isEdit ? 'Save Changes' : 'Add Medicine'}

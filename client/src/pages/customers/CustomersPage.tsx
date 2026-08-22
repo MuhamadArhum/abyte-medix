@@ -3,13 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Edit, Trash2, BookOpen } from 'lucide-react'
 import { api } from '../../api/client'
-import Table, { Column } from '../../components/ui/Table'
+import Table, { type Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 import SearchInput from '../../components/ui/SearchInput'
 import Modal from '../../components/ui/Modal'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Badge from '../../components/ui/Badge'
-import Spinner from '../../components/ui/Spinner'
 import CustomerForm from './CustomerForm'
 import CustomerLedger from './CustomerLedger'
 
@@ -27,6 +26,7 @@ interface Customer {
 export default function CustomersPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
@@ -34,8 +34,8 @@ export default function CustomersPage() {
   const [deleteCustomer, setDeleteCustomer] = useState<Customer | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', page, search],
-    queryFn: () => api.get(`/customers?page=${page}&limit=20&search=${search}`).then(r => r.data),
+    queryKey: ['customers', page, limit, search],
+    queryFn: () => api.get(`/customers?page=${page}&limit=${limit}&search=${search}`).then(r => r.data),
   })
 
   const customers: Customer[] = data?.data ?? data ?? []
@@ -103,7 +103,7 @@ export default function CustomersPage() {
           </div>
         </div>
         <Table columns={columns} data={customers} loading={isLoading} />
-        <Pagination page={page} total={total} limit={20} onChange={setPage} />
+        <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Customer">

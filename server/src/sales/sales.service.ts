@@ -35,13 +35,23 @@ export class SalesService {
       .findUnique({ where: { key: 'invoice_prefix' } })
       .then((s) => s?.value ?? 'INV')
 
-    const today = new Date()
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '')
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const pattern = `${prefix}-${dateStr}-`
 
-    const count = await this.prisma.sale.count({
-      where: { createdAt: { gte: new Date(today.setHours(0, 0, 0, 0)) } },
+    const last = await this.prisma.sale.findFirst({
+      where: { invoiceNumber: { startsWith: pattern } },
+      orderBy: { id: 'desc' },
+      select: { invoiceNumber: true },
     })
-    return `${prefix}-${dateStr}-${String(count + 1).padStart(4, '0')}`
+
+    let seq = 1
+    if (last) {
+      const tail = last.invoiceNumber.slice(pattern.length)
+      const n = parseInt(tail, 10)
+      if (!isNaN(n)) seq = n + 1
+    }
+
+    return `${pattern}${String(seq).padStart(4, '0')}`
   }
 
   async createSale(dto: CreateSaleDto) {
@@ -125,7 +135,7 @@ export class SalesService {
     }
     if (customerId) where.customerId = customerId
 
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.sale.findMany({
         where,
         include: { customer: true, user: { select: { fullName: true } } },
@@ -135,6 +145,7 @@ export class SalesService {
       }),
       this.prisma.sale.count({ where }),
     ])
+    return { data, total }
   }
 
   async findOne(id: number) {
@@ -218,9 +229,12 @@ export class SalesService {
     })
   }
 
-  // FR-9.7 — Hold a sale (save as DRAFT without stock decrement)
-  async holdSale(dto: { userId: number; customerId?: number; terminalId?: string; items: any[]; subtotal: number; discountAmount: number; taxAmount: number; total: number; notes?: string }) {
-    const invoiceNumber = `HOLD-${Date.now()}`
+  private async saveDraft(prefix: string, dto: {
+    userId: number; customerId?: number; terminalId?: string
+    items: any[]; subtotal: number; discountAmount: number; taxAmount: number
+    total: number; notes?: string
+  }) {
+    const invoiceNumber = `${prefix}-${Date.now()}`
     return this.prisma.sale.create({
       data: {
         invoiceNumber,
@@ -228,7 +242,7 @@ export class SalesService {
         userId: dto.userId,
         terminalId: dto.terminalId,
         status: SaleStatus.DRAFT,
-        subtotal: dto.subtotal,
+        subtotal: dto.subtotal ?? 0,
         discountAmount: dto.discountAmount ?? 0,
         taxAmount: dto.taxAmount ?? 0,
         total: dto.total,
@@ -239,23 +253,37 @@ export class SalesService {
         items: {
           create: dto.items.map((i) => ({
             batchId: i.batchId,
-            quantity: i.quantity,
-            saleRate: i.saleRate,
+            quantity: i.qty ?? i.quantity ?? 1,
+            saleRate: i.saleRate ?? 0,
             discount: i.discount ?? 0,
             taxRate: i.taxRate ?? 0,
-            total: i.total,
+            total: i.total ?? 0,
           })),
         },
       },
-      include: { items: true },
+      include: {
+        items: { include: { batch: { include: { medicine: true } } } },
+        customer: true,
+      },
     })
   }
 
-  // FR-9.7 — Get all held (DRAFT) sales for a terminal
+  // Hold a sale (HOLD- prefix)
+  async holdSale(dto: { userId: number; customerId?: number; terminalId?: string; items: any[]; subtotal: number; discountAmount: number; taxAmount: number; total: number; notes?: string }) {
+    return this.saveDraft('HOLD', dto)
+  }
+
+  // Save a quotation (QUOT- prefix)
+  async saveQuotation(dto: { userId: number; customerId?: number; items: any[]; subtotal: number; discountAmount: number; taxAmount: number; total: number; notes?: string }) {
+    return this.saveDraft('QUOT', dto)
+  }
+
+  // Get held sales (HOLD- prefix only)
   getHeldSales(userId: number, terminalId?: string) {
     return this.prisma.sale.findMany({
       where: {
         status: SaleStatus.DRAFT,
+        invoiceNumber: { startsWith: 'HOLD-' },
         userId,
         ...(terminalId ? { terminalId } : {}),
       },
@@ -267,8 +295,23 @@ export class SalesService {
     })
   }
 
-  // FR-9.7 — Discard a held sale
-  async discardHeldSale(saleId: number) {
+  // Get quotations (QUOT- prefix only)
+  getQuotations() {
+    return this.prisma.sale.findMany({
+      where: {
+        status: SaleStatus.DRAFT,
+        invoiceNumber: { startsWith: 'QUOT-' },
+      },
+      include: {
+        items: { include: { batch: { include: { medicine: true } } } },
+        customer: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  // Delete a draft (held or quotation)
+  async discardDraft(saleId: number) {
     const sale = await this.prisma.sale.findUnique({ where: { id: saleId } })
     if (!sale) throw new NotFoundException('Sale not found')
     if (sale.status !== SaleStatus.DRAFT) {
@@ -276,4 +319,7 @@ export class SalesService {
     }
     return this.prisma.sale.delete({ where: { id: saleId } })
   }
+
+  /** @deprecated use discardDraft */
+  discardHeldSale(saleId: number) { return this.discardDraft(saleId) }
 }

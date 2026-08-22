@@ -47,15 +47,20 @@ export default function BackupPage() {
   const lastBackup = backupList[0]
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Backup & Restore</h2>
+    <div>
+      <div className="pg-header">
+        <div>
+          <div className="pg-title">Backup & Restore</div>
+          <div className="pg-sub">Manage database backups and restore points</div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Status Card */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <HardDrive size={20} className="text-blue-600" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(62,142,90,0.12)' }}>
+              <HardDrive size={20} style={{ color: '#17B978' }} />
             </div>
             <div>
               <h3 className="font-semibold text-gray-800">Backup Status</h3>
@@ -89,7 +94,7 @@ export default function BackupPage() {
           <button
             onClick={() => createMutation.mutate()}
             disabled={createMutation.isPending}
-            className="mt-4 w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="btn btn-primary mt-4 w-full justify-center"
           >
             {createMutation.isPending ? (
               <><Spinner size="sm" /> Creating Backup...</>
@@ -100,18 +105,18 @@ export default function BackupPage() {
         </div>
 
         {/* Backup History */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-700">Backup History</h3>
+        <div className="lg:col-span-2 card">
+          <div className="px-5 py-4 card-divider" style={{ borderBottom: '1px solid var(--rule)' }}>
+            <h3 className="card-title" style={{ marginBottom: 0 }}>Backup History</h3>
           </div>
           {isLoading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+            <table className="tbl">
+              <thead>
                 <tr>
                   {['Filename', 'Size', 'Status', 'Date', 'Action'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs text-gray-500 uppercase font-semibold">{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -120,12 +125,12 @@ export default function BackupPage() {
                   <tr><td colSpan={5} className="text-center py-10 text-gray-400">No backups found</td></tr>
                 ) : (
                   backupList.map((b) => (
-                    <tr key={b.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3 text-xs truncate max-w-xs">{b.filename}</td>
-                      <td className="px-4 py-3">{formatBytes(b.size ?? 0)}</td>
-                      <td className="px-4 py-3"><Badge label={b.status ?? 'COMPLETE'} variant="green" /></td>
-                      <td className="px-4 py-3">{new Date(b.createdAt).toLocaleString()}</td>
-                      <td className="px-4 py-3">
+                    <tr key={b.id}>
+                      <td className="text-xs truncate max-w-xs">{b.filename}</td>
+                      <td>{formatBytes(b.size ?? 0)}</td>
+                      <td><Badge label={b.status ?? 'COMPLETE'} variant="green" /></td>
+                      <td>{new Date(b.createdAt).toLocaleString()}</td>
+                      <td>
                         <button
                           onClick={() => {
                             if (confirm('Restore from this backup? This will overwrite current data.')) {
@@ -133,7 +138,8 @@ export default function BackupPage() {
                             }
                           }}
                           disabled={restoreMutation.isPending}
-                          className="text-xs text-orange-600 hover:text-orange-800 font-medium border border-orange-200 px-2 py-1 rounded hover:bg-orange-50 disabled:opacity-50"
+                          className="text-xs font-medium border px-2 py-1 rounded disabled:opacity-50"
+                          style={{ color: '#93630F', borderColor: '#F5D99C', background: '#FDF2E1' }}
                         >
                           Restore
                         </button>

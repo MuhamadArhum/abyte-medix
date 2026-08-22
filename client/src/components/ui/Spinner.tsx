@@ -1,6 +1,10 @@
 export default function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const cls = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-10 h-10' : 'w-6 h-6'
+  const s = size === 'sm' ? 16 : size === 'lg' ? 40 : 24
   return (
-    <div className={`${cls} border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin`} />
+    <div style={{
+      width: s, height: s, border: '2px solid var(--rule)',
+      borderTop: '2px solid var(--orange)', borderRadius: '50%',
+      animation: 'spin 0.7s linear infinite', flexShrink: 0,
+    }} />
   )
 }

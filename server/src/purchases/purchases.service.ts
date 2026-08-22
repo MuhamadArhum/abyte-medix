@@ -122,7 +122,7 @@ export class PurchasesService {
       if (from) where.purchaseDate.gte = new Date(from)
       if (to) where.purchaseDate.lte = new Date(to)
     }
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.purchase.findMany({
         where,
         include: { supplier: true },
@@ -132,6 +132,7 @@ export class PurchasesService {
       }),
       this.prisma.purchase.count({ where }),
     ])
+    return { data, total }
   }
 
   async findOne(id: number) {

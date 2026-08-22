@@ -1,22 +1,27 @@
-type BadgeVariant = 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'orange'
+type Variant = 'ok' | 'warn' | 'danger' | 'neutral' | 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'orange'
 
-const variants: Record<BadgeVariant, string> = {
-  green: 'bg-green-100 text-green-700',
-  red: 'bg-red-100 text-red-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
-  blue: 'bg-blue-100 text-blue-700',
-  gray: 'bg-gray-100 text-gray-600',
-  orange: 'bg-orange-100 text-orange-700',
+const styles: Record<Variant, React.CSSProperties> = {
+  ok:      { background: 'rgba(62,142,90,0.12)',   color: '#3E8E5A' },
+  green:   { background: 'rgba(62,142,90,0.12)',   color: '#3E8E5A' },
+  warn:    { background: 'rgba(201,138,30,0.14)',  color: '#C98A1E' },
+  yellow:  { background: 'rgba(201,138,30,0.14)',  color: '#C98A1E' },
+  orange:  { background: 'rgba(232,93,31,0.12)',   color: '#E85D1F' },
+  danger:  { background: 'rgba(194,59,46,0.12)',   color: '#C23B2E' },
+  red:     { background: 'rgba(194,59,46,0.12)',   color: '#C23B2E' },
+  neutral: { background: 'rgba(107,113,120,0.10)', color: '#6B7178' },
+  gray:    { background: 'rgba(107,113,120,0.10)', color: '#6B7178' },
+  blue:    { background: 'rgba(14,42,71,0.10)',    color: '#0E2A47' },
 }
 
-interface BadgeProps {
-  label: string
-  variant?: BadgeVariant
-}
-
-export default function Badge({ label, variant = 'gray' }: BadgeProps) {
+export default function Badge({ label, variant = 'neutral' }: { label: string; variant?: Variant }) {
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
+    <span style={{
+      ...styles[variant],
+      fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 500,
+      padding: '2px 9px', borderRadius: 10,
+      display: 'inline-block', whiteSpace: 'nowrap',
+      textTransform: 'uppercase', letterSpacing: '0.03em',
+    }}>
       {label}
     </span>
   )

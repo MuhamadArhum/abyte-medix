@@ -44,23 +44,26 @@ export default function LicensePage() {
     ? (daysRemaining !== null && daysRemaining <= 30 ? 'warning' : 'active')
     : 'inactive'
 
-  const inputCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const inputCls = 'field-input'
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">License</h2>
+    <div>
+      <div style={{ marginBottom: 18 }}>
+        <div className="pg-title">License</div>
+        <div className="pg-sub">Software license management</div>
+      </div>
 
       <div className="max-w-2xl space-y-6">
         {/* Current License */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-5">
             {licenseStatus === 'active' ? (
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <ShieldCheck size={20} className="text-green-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(62,142,90,0.12)' }}>
+                <ShieldCheck size={20} style={{ color: '#17B978' }} />
               </div>
             ) : (
-              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                <AlertTriangle size={20} className="text-red-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#FBE7E2' }}>
+                <AlertTriangle size={20} style={{ color: '#C1462F' }} />
               </div>
             )}
             <div>
@@ -99,10 +102,10 @@ export default function LicensePage() {
 
         {/* Activate Form */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Activate License</h3>
+          <h3 className="font-semibold mb-4 pb-2" style={{ color: 'var(--ink)', borderBottom: '1px solid var(--rule)' }}>Activate License</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">License Key *</label>
+              <label className="field-label">License Key *</label>
               <input
                 className={inputCls}
                 value={form.licenseKey}
@@ -112,12 +115,12 @@ export default function LicensePage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Store Name</label>
+              <label className="field-label">Store Name</label>
               <input className={inputCls} value={form.storeName} onChange={e => set('storeName', e.target.value)} />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Plan</label>
+                <label className="field-label">Plan</label>
                 <select className={inputCls} value={form.plan} onChange={e => set('plan', e.target.value)}>
                   <option value="BASIC">Basic</option>
                   <option value="STANDARD">Standard</option>
@@ -125,11 +128,11 @@ export default function LicensePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Max POS</label>
+                <label className="field-label">Max POS</label>
                 <input type="number" className={inputCls} value={form.maxPos} onChange={e => set('maxPos', Number(e.target.value))} min={1} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Expiry Date</label>
+                <label className="field-label">Expiry Date</label>
                 <input type="date" className={inputCls} value={form.expiryDate} onChange={e => set('expiryDate', e.target.value)} />
               </div>
             </div>
@@ -137,7 +140,7 @@ export default function LicensePage() {
               <button
                 onClick={() => activateMutation.mutate(form)}
                 disabled={activateMutation.isPending || !form.licenseKey}
-                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="btn btn-primary"
               >
                 {activateMutation.isPending && <Spinner size="sm" />}
                 Activate License

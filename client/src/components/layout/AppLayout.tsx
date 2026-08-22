@@ -2,45 +2,29 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/auth.store'
 import { api } from '../../api/client'
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  Pill,
-  PackageOpen,
-  Boxes,
-  Users,
-  Truck,
-  BarChart3,
-  Wallet,
-  UserCog,
-  Settings,
-  ClipboardList,
-  HardDrive,
-  ShieldCheck,
-  LogOut,
+  LayoutDashboard, ShoppingCart, Pill, PackageOpen, Boxes,
+  Users, Truck, BarChart3, Wallet, UserCog, Settings,
+  ClipboardList, HardDrive, ShieldCheck, LogOut, FileText,
 } from 'lucide-react'
 
-interface NavItem {
-  to: string
-  label: string
-  icon: React.ReactNode
-  roles: string[]
-}
+interface NavItem { to: string; label: string; icon: React.ReactNode; roles: string[] }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} />, roles: ['ADMIN', 'MANAGER'] },
-  { to: '/pos', label: 'POS / Sales', icon: <ShoppingCart size={16} />, roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
-  { to: '/medicines', label: 'Medicines', icon: <Pill size={16} />, roles: ['ADMIN', 'MANAGER', 'INVENTORY_STAFF'] },
-  { to: '/purchases', label: 'Purchases', icon: <PackageOpen size={16} />, roles: ['ADMIN', 'MANAGER', 'INVENTORY_STAFF'] },
-  { to: '/inventory', label: 'Inventory', icon: <Boxes size={16} />, roles: ['ADMIN', 'MANAGER', 'INVENTORY_STAFF'] },
-  { to: '/customers', label: 'Customers', icon: <Users size={16} />, roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
-  { to: '/suppliers', label: 'Suppliers', icon: <Truck size={16} />, roles: ['ADMIN', 'MANAGER'] },
-  { to: '/reports', label: 'Reports', icon: <BarChart3 size={16} />, roles: ['ADMIN', 'MANAGER'] },
-  { to: '/accounts', label: 'Accounts', icon: <Wallet size={16} />, roles: ['ADMIN'] },
-  { to: '/users', label: 'Users', icon: <UserCog size={16} />, roles: ['ADMIN'] },
-  { to: '/settings', label: 'Settings', icon: <Settings size={16} />, roles: ['ADMIN'] },
-  { to: '/audit', label: 'Audit Logs', icon: <ClipboardList size={16} />, roles: ['ADMIN'] },
-  { to: '/backup', label: 'Backup', icon: <HardDrive size={16} />, roles: ['ADMIN'] },
-  { to: '/license', label: 'License', icon: <ShieldCheck size={16} />, roles: ['ADMIN'] },
+  { to: '/',          label: 'Dashboard',  icon: <LayoutDashboard size={14} />, roles: ['ADMIN','MANAGER'] },
+  { to: '/pos',        label: 'Sales / POS',  icon: <ShoppingCart size={14} />, roles: ['ADMIN','MANAGER','CASHIER'] },
+  { to: '/quotations', label: 'Quotations',  icon: <FileText size={14} />,     roles: ['ADMIN','MANAGER','CASHIER'] },
+  { to: '/medicines', label: 'Medicines',  icon: <Pill size={14} />,            roles: ['ADMIN','MANAGER','INVENTORY_STAFF'] },
+  { to: '/purchases', label: 'Purchases',  icon: <PackageOpen size={14} />,     roles: ['ADMIN','MANAGER','INVENTORY_STAFF'] },
+  { to: '/inventory', label: 'Inventory',  icon: <Boxes size={14} />,           roles: ['ADMIN','MANAGER','INVENTORY_STAFF'] },
+  { to: '/customers', label: 'Customers',  icon: <Users size={14} />,           roles: ['ADMIN','MANAGER','CASHIER'] },
+  { to: '/suppliers', label: 'Suppliers',  icon: <Truck size={14} />,           roles: ['ADMIN','MANAGER'] },
+  { to: '/reports',   label: 'Reports',    icon: <BarChart3 size={14} />,       roles: ['ADMIN','MANAGER'] },
+  { to: '/accounts',  label: 'Accounts',   icon: <Wallet size={14} />,          roles: ['ADMIN'] },
+  { to: '/users',     label: 'Users',      icon: <UserCog size={14} />,         roles: ['ADMIN'] },
+  { to: '/settings',  label: 'Settings',   icon: <Settings size={14} />,        roles: ['ADMIN'] },
+  { to: '/audit',     label: 'Audit Logs', icon: <ClipboardList size={14} />,   roles: ['ADMIN'] },
+  { to: '/backup',    label: 'Backup',     icon: <HardDrive size={14} />,       roles: ['ADMIN'] },
+  { to: '/license',   label: 'License',    icon: <ShieldCheck size={14} />,     roles: ['ADMIN'] },
 ]
 
 export default function AppLayout() {
@@ -55,50 +39,156 @@ export default function AppLayout() {
   }
 
   const visibleNav = NAV_ITEMS.filter((n) => user && n.roles.includes(user.role))
+  const initials = user?.fullName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--paper)', overflow: 'hidden' }}>
+
       {/* Sidebar */}
-      <aside className="w-56 bg-gray-900 flex flex-col shrink-0">
-        <div className="px-4 py-5 border-b border-gray-700">
-          <h1 className="text-white font-bold text-lg">AbyteMedix</h1>
-          <p className="text-gray-400 text-xs mt-0.5">{user?.fullName}</p>
-          <span className="text-xs text-blue-400 mt-0.5 block">{user?.role}</span>
+      <aside style={{
+        width: 'var(--sidebar-w)', flexShrink: 0,
+        background: 'var(--blueprint-deep)',
+        padding: '0 0 12px', display: 'flex', flexDirection: 'column',
+        overflowY: 'auto',
+      }}>
+        {/* Brand */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '18px 14px 16px',
+          borderBottom: '1px solid rgba(154,198,232,0.12)',
+        }}>
+          <div style={{
+            width: 28, height: 28, background: 'var(--orange)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Pill size={14} color="#fff" />
+          </div>
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 14,
+              color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em',
+              lineHeight: 1.1,
+            }}>
+              AbyteMedix
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--line-cyan)',
+              textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2, opacity: 0.7,
+            }}>
+              Medical Store
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1 py-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
+        {/* Nav section label */}
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--line-cyan)',
+          opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em',
+          padding: '14px 14px 6px',
+        }}>
+          Navigation
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1, padding: '0 8px' }}>
           {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                }`
-              }
+              style={({ isActive }) => ({
+                all: 'unset' as any,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '8px 10px',
+                borderLeft: isActive ? '3px solid var(--orange)' : '3px solid transparent',
+                borderRadius: '0 var(--radius) var(--radius) 0',
+                fontFamily: 'var(--font-mono)', fontSize: 11,
+                fontWeight: isActive ? 600 : 400,
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+                color: isActive ? '#fff' : 'rgba(154,198,232,0.55)',
+                background: isActive ? 'rgba(232,93,31,0.12)' : 'transparent',
+                transition: 'all 0.12s',
+              })}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLElement
+                if (!el.style.background.includes('0.12')) {
+                  el.style.background = 'rgba(154,198,232,0.06)'
+                  el.style.color = 'rgba(154,198,232,0.85)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLElement
+                if (!el.style.background.includes('0.12')) {
+                  el.style.background = 'transparent'
+                  el.style.color = 'rgba(154,198,232,0.55)'
+                }
+              }}
             >
-              {item.icon}
+              <span style={{ flexShrink: 0, opacity: 0.85 }}>{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
         </nav>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2.5 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 text-sm text-left border-t border-gray-700 transition-colors"
-        >
-          <LogOut size={16} />
-          Sign Out
-        </button>
+        {/* Footer */}
+        <div style={{
+          borderTop: '1px solid rgba(154,198,232,0.12)',
+          paddingTop: 10, marginTop: 8, padding: '10px 8px 0',
+        }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9,
+              padding: '8px 10px', width: '100%', borderRadius: 'var(--radius)',
+              fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 400,
+              textTransform: 'uppercase', letterSpacing: '0.04em',
+              color: 'rgba(154,198,232,0.4)',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--red-risk)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(154,198,232,0.4)' }}
+          >
+            <LogOut size={14} />
+            Sign Out
+          </button>
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 9.5,
+            color: 'rgba(154,198,232,0.3)',
+            padding: '4px 10px 0',
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>
+            {user?.fullName} · {user?.role}
+          </div>
+        </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto bg-gray-50">
-        <Outlet />
-      </main>
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Topbar */}
+        <div style={{
+          height: 50, borderBottom: '1px solid var(--rule)',
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          padding: '0 20px', flexShrink: 0,
+          background: 'var(--paper-light)',
+        }}>
+          <div style={{
+            width: 34, height: 34, background: 'var(--blueprint)',
+            color: '#fff', fontFamily: 'var(--font-oswald)',
+            fontWeight: 700, fontSize: 13, letterSpacing: '0.04em',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {initials}
+          </div>
+        </div>
+
+        {/* Content */}
+        <main style={{ flex: 1, overflowY: 'auto', padding: 20, background: 'var(--paper)' }}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

@@ -38,41 +38,41 @@ export default function SupplierForm({ initialData, onSuccess, onCancel }: Props
     mutation.mutate(form)
   }
 
-  const inputCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const inputCls = 'field-input'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+        <label className="field-label">Name *</label>
         <input className={inputCls} value={form.name} onChange={e => set('name', e.target.value)} required />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Contact Person</label>
+          <label className="field-label">Contact Person</label>
           <input className={inputCls} value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+          <label className="field-label">Phone</label>
           <input className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+          <label className="field-label">Email</label>
           <input type="email" className={inputCls} value={form.email} onChange={e => set('email', e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">NTN</label>
+          <label className="field-label">NTN</label>
           <input className={inputCls} value={form.ntn} onChange={e => set('ntn', e.target.value)} />
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+        <label className="field-label">Address</label>
         <textarea className={inputCls} value={form.address} onChange={e => set('address', e.target.value)} rows={2} />
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-        <button type="submit" disabled={mutation.isPending} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
+        <button type="submit" disabled={mutation.isPending} className="btn btn-primary disabled:opacity-50">
           {mutation.isPending && <Spinner size="sm" />}
           {isEdit ? 'Save' : 'Add Supplier'}
         </button>

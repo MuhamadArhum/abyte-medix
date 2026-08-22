@@ -10,36 +10,78 @@ export class InventoryService {
     private audit: AuditService,
   ) {}
 
-  async getStock() {
-    const medicines = await this.prisma.medicine.findMany({
-      where: { isActive: true },
-      include: {
-        batches: {
-          select: {
-            id: true,
-            batchNumber: true,
-            expiryDate: true,
-            purchaseRate: true,
-            saleRate: true,
-            quantity: true,
-            freeQuantity: true,
-          },
-        },
-        category: { select: { name: true } },
-        manufacturer: { select: { name: true } },
-      },
-      orderBy: { brandName: 'asc' },
-    })
+  async getStock(page = 1, limit = 25, search = '', filter = '') {
+    const where: any = { isActive: true }
 
-    return medicines.map((m) => ({
-      medicineId: m.id,
-      brandName: m.brandName,
-      genericName: m.genericName,
-      category: m.category?.name ?? null,
-      manufacturer: m.manufacturer?.name ?? null,
-      totalQty: m.batches.reduce((sum, b) => sum + b.quantity, 0),
-      batches: m.batches,
+    if (search) {
+      where.OR = [
+        { brandName: { contains: search } },
+        { genericName: { contains: search } },
+        { productCode: { contains: search } },
+      ]
+    }
+
+    const batchSelect = {
+      id: true, batchNumber: true, expiryDate: true,
+      purchaseRate: true, saleRate: true, quantity: true, freeQuantity: true,
+    }
+
+    // For status filters we need to aggregate, so fetch matching set then filter
+    if (filter === 'low' || filter === 'out') {
+      const all = await this.prisma.medicine.findMany({
+        where,
+        include: {
+          batches: { select: batchSelect },
+          category: { select: { name: true } },
+          manufacturer: { select: { name: true } },
+        },
+        orderBy: { brandName: 'asc' },
+      })
+
+      const mapped = all.map((m) => ({
+        id: m.id, medicineId: m.id,
+        brandName: m.brandName, genericName: m.genericName, strength: m.strength,
+        reorderLevel: m.reorderLevel ?? 10,
+        category: m.category?.name ?? null, manufacturer: m.manufacturer?.name ?? null,
+        totalQty: m.batches.reduce((s, b) => s + b.quantity, 0),
+        batches: m.batches.map(b => ({ ...b, currentQty: b.quantity })),
+      }))
+
+      const filtered = filter === 'out'
+        ? mapped.filter(m => m.totalQty === 0)
+        : mapped.filter(m => m.totalQty > 0 && m.totalQty <= m.reorderLevel)
+
+      const total = filtered.length
+      const data = filtered.slice((page - 1) * limit, page * limit)
+      return { data, total, page, limit }
+    }
+
+    const skip = (page - 1) * limit
+    const [medicines, total] = await this.prisma.$transaction([
+      this.prisma.medicine.findMany({
+        where,
+        include: {
+          batches: { select: batchSelect },
+          category: { select: { name: true } },
+          manufacturer: { select: { name: true } },
+        },
+        orderBy: { brandName: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.medicine.count({ where }),
+    ])
+
+    const data = medicines.map((m) => ({
+      id: m.id, medicineId: m.id,
+      brandName: m.brandName, genericName: m.genericName, strength: m.strength,
+      reorderLevel: m.reorderLevel ?? 10,
+      category: m.category?.name ?? null, manufacturer: m.manufacturer?.name ?? null,
+      totalQty: m.batches.reduce((s, b) => s + b.quantity, 0),
+      batches: m.batches.map(b => ({ ...b, currentQty: b.quantity })),
     }))
+
+    return { data, total, page, limit }
   }
 
   async getMovements(
@@ -64,7 +106,7 @@ export class InventoryService {
       where.batch = { medicineId }
     }
 
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.stockMovement.findMany({
         where,
         include: {
@@ -78,6 +120,7 @@ export class InventoryService {
       }),
       this.prisma.stockMovement.count({ where }),
     ])
+    return { data, total }
   }
 
   async adjustment(dto: {

@@ -10,12 +10,7 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }
 
-const sizeMap = {
-  sm: 'max-w-sm',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-}
+const sizeMap = { sm: 360, md: 520, lg: 720, xl: 960 }
 
 export default function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
   useEffect(() => {
@@ -27,23 +22,48 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(8,27,48,0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 50, padding: 16,
+    }} onClick={onClose}>
       <div
-        className={`bg-white rounded-xl w-full ${sizeMap[size]} max-h-[90vh] flex flex-col shadow-xl`}
         onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--paper-light)', borderRadius: 'var(--radius)', width: '100%',
+          maxWidth: sizeMap[size], maxHeight: '90vh',
+          display: 'flex', flexDirection: 'column',
+          border: '1px solid var(--rule)',
+          boxShadow: '0 8px 32px rgba(8,27,48,0.18)',
+        }}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 20px', borderBottom: '1px solid var(--rule)', flexShrink: 0,
+        }}>
+          <h3 style={{
+            fontFamily: 'var(--font-oswald)', fontWeight: 600, fontSize: 15,
+            color: 'var(--blueprint)', textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>
+            {title}
+          </h3>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--steel)', padding: 4, borderRadius: 'var(--radius)',
+            display: 'flex', alignItems: 'center',
+          }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--red-risk)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--steel)' }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
-        <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
+        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2 shrink-0">
+          <div style={{
+            padding: '14px 20px', borderTop: '1px solid var(--rule)',
+            display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0,
+          }}>
             {footer}
           </div>
         )}

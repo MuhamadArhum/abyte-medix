@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../api/client'
-import Table, { Column } from '../../components/ui/Table'
+import Table from '../../components/ui/Table'
+import type { Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 
 interface AuditLog {
@@ -18,6 +19,7 @@ const MODULES = ['Sales', 'Purchase', 'Inventory', 'Medicines', 'Customers', 'Su
 
 export default function AuditPage() {
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(25)
   const [userId, setUserId] = useState('')
   const [module, setModule] = useState('')
   const [from, setFrom] = useState('')
@@ -29,9 +31,9 @@ export default function AuditPage() {
   })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit', page, userId, module, from, to],
+    queryKey: ['audit', page, limit, userId, module, from, to],
     queryFn: () =>
-      api.get(`/audit?page=${page}&limit=25&userId=${userId}&module=${module}&from=${from}&to=${to}`)
+      api.get(`/audit?page=${page}&limit=${limit}&userId=${userId}&module=${module}&from=${from}&to=${to}`)
         .then(r => r.data),
   })
 
@@ -43,13 +45,13 @@ export default function AuditPage() {
     { key: 'user', label: 'User', render: r => r.user?.fullName ?? r.user?.username ?? '—' },
     {
       key: 'module', label: 'Module', render: r => (
-        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{r.module}</span>
+        <span className="badge badge-blue">{r.module}</span>
       )
     },
     {
       key: 'action', label: 'Action', render: r => {
-        const cls = r.action === 'DELETE' ? 'bg-red-100 text-red-700' : r.action === 'CREATE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-        return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{r.action}</span>
+        const cls = r.action === 'DELETE' ? 'badge-danger' : r.action === 'CREATE' ? 'badge-ok' : 'badge-neutral'
+        return <span className={`badge ${cls}`}>{r.action}</span>
       }
     },
     { key: 'recordId', label: 'Record ID', render: r => r.recordId ?? '—' },
@@ -64,56 +66,41 @@ export default function AuditPage() {
 
   const userList = users?.data ?? users ?? []
 
-  return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Audit Logs</h2>
+  const filterSel: React.CSSProperties = {
+    background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)',
+    padding: '7px 10px', fontSize: 12.5, color: 'var(--ink)', outline: 'none',
+    fontFamily: 'var(--font-sans)',
+  }
 
-      <div className="bg-white rounded-xl border border-gray-200">
-        {/* Filters */}
-        <div className="p-4 border-b border-gray-200 flex gap-3 flex-wrap">
-          <select
-            value={userId}
-            onChange={e => { setUserId(e.target.value); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+  return (
+    <div>
+      <div style={{ marginBottom: 18 }}>
+        <h1 style={{ fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 19, color: 'var(--ink)' }}>Audit Logs</h1>
+        <div style={{ fontSize: 12.5, color: 'var(--steel)', marginTop: 2 }}>Full activity trail for all system actions</div>
+      </div>
+
+      <div style={{ background: '#FFFFFF', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--rule)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <select value={userId} onChange={e => { setUserId(e.target.value); setPage(1) }} style={filterSel}>
             <option value="">All Users</option>
             {userList.map((u: any) => <option key={u.id} value={u.id}>{u.fullName ?? u.username}</option>)}
           </select>
-
-          <select
-            value={module}
-            onChange={e => { setModule(e.target.value); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <select value={module} onChange={e => { setModule(e.target.value); setPage(1) }} style={filterSel}>
             <option value="">All Modules</option>
             {MODULES.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-
-          <input
-            type="date"
-            value={from}
-            onChange={e => { setFrom(e.target.value); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="date"
-            value={to}
-            onChange={e => { setTo(e.target.value); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
+          <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1) }} style={filterSel} />
+          <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1) }} style={filterSel} />
           {(userId || module || from || to) && (
-            <button
-              onClick={() => { setUserId(''); setModule(''); setFrom(''); setTo(''); setPage(1) }}
-              className="text-sm text-gray-400 hover:text-gray-600"
-            >
+            <button onClick={() => { setUserId(''); setModule(''); setFrom(''); setTo(''); setPage(1) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12.5, color: 'var(--steel)' }}>
               Clear filters
             </button>
           )}
         </div>
 
         <Table columns={columns} data={logs} loading={isLoading} />
-        <Pagination page={page} total={total} limit={25} onChange={setPage} />
+        <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
     </div>
   )

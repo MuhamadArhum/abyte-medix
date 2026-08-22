@@ -24,41 +24,41 @@ export default function SupplierLedger({ supplier, onClose }: Props) {
         <div>
           {data?.summary && (
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-400">Total Purchases</p>
-                <p className="font-bold text-gray-900">Rs. {Number(data.summary.totalPurchases ?? 0).toLocaleString()}</p>
+              <div className="rounded-lg p-3 text-center" style={{ background: 'var(--paper)', border: '1px solid var(--rule)' }}>
+                <p className="text-xs" style={{ color: 'var(--steel)' }}>Total Purchases</p>
+                <p className="font-bold" style={{ color: 'var(--ink)' }}>Rs. {Number(data.summary.totalPurchases ?? 0).toLocaleString()}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-400">Total Paid</p>
-                <p className="font-bold text-green-700">Rs. {Number(data.summary.totalPaid ?? 0).toLocaleString()}</p>
+              <div className="rounded-lg p-3 text-center" style={{ background: '#E4F5EC', border: '1px solid #DCEFE6' }}>
+                <p className="text-xs" style={{ color: '#2F8F5F' }}>Total Paid</p>
+                <p className="font-bold" style={{ color: '#2F8F5F' }}>Rs. {Number(data.summary.totalPaid ?? 0).toLocaleString()}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-400">Payable</p>
-                <p className="font-bold text-red-600">Rs. {Number(data.summary.payable ?? 0).toLocaleString()}</p>
+              <div className="rounded-lg p-3 text-center" style={{ background: '#FBE7E2', border: '1px solid #F4C2B8' }}>
+                <p className="text-xs" style={{ color: '#C1462F' }}>Payable</p>
+                <p className="font-bold" style={{ color: '#C1462F' }}>Rs. {Number(data.summary.payable ?? 0).toLocaleString()}</p>
               </div>
             </div>
           )}
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto card">
+            <table className="tbl">
+              <thead>
                 <tr>
                   {['Date', 'Type', 'Reference', 'Debit', 'Credit', 'Balance'].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-xs text-gray-500 uppercase font-semibold">{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {entries.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-gray-400">No transactions</td></tr>
+                  <tr><td colSpan={6} className="text-center py-8" style={{ color: 'var(--steel)' }}>No transactions</td></tr>
                 ) : (
                   entries.map((e: any, i: number) => (
-                    <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-3 py-2">{new Date(e.date ?? e.createdAt).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 font-medium capitalize">{e.type}</td>
-                      <td className="px-3 py-2 text-gray-500">{e.reference ?? e.invoiceNumber ?? '—'}</td>
-                      <td className="px-3 py-2 text-red-600">{e.debit ? `Rs. ${Number(e.debit).toFixed(2)}` : '—'}</td>
-                      <td className="px-3 py-2 text-green-600">{e.credit ? `Rs. ${Number(e.credit).toFixed(2)}` : '—'}</td>
-                      <td className="px-3 py-2 font-semibold">Rs. {Number(e.balance ?? e.runningBalance ?? 0).toFixed(2)}</td>
+                    <tr key={i}>
+                      <td>{new Date(e.date ?? e.createdAt).toLocaleDateString()}</td>
+                      <td className="font-medium capitalize">{e.type}</td>
+                      <td style={{ color: 'var(--steel)' }}>{e.reference ?? e.invoiceNumber ?? '—'}</td>
+                      <td style={{ color: '#C1462F' }}>{e.debit ? `Rs. ${Number(e.debit).toFixed(2)}` : '—'}</td>
+                      <td style={{ color: '#2F8F5F' }}>{e.credit ? `Rs. ${Number(e.credit).toFixed(2)}` : '—'}</td>
+                      <td className="font-semibold">Rs. {Number(e.balance ?? e.runningBalance ?? 0).toFixed(2)}</td>
                     </tr>
                   ))
                 )}

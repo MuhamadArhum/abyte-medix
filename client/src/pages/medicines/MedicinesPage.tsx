@@ -3,13 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Eye, Edit, PowerOff } from 'lucide-react'
 import { api } from '../../api/client'
-import Table, { Column } from '../../components/ui/Table'
+import Table, { type Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 import SearchInput from '../../components/ui/SearchInput'
 import Modal from '../../components/ui/Modal'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Badge from '../../components/ui/Badge'
-import Spinner from '../../components/ui/Spinner'
 import MedicineForm from './MedicineForm'
 import BatchListModal from './BatchListModal'
 
@@ -36,6 +35,7 @@ interface Medicine {
 export default function MedicinesPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editMed, setEditMed] = useState<Medicine | null>(null)
@@ -43,8 +43,8 @@ export default function MedicinesPage() {
   const [deactivateMed, setDeactivateMed] = useState<Medicine | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['medicines', page, search],
-    queryFn: () => api.get(`/medicines?page=${page}&limit=20&search=${search}`).then(r => r.data),
+    queryKey: ['medicines', page, limit, search],
+    queryFn: () => api.get(`/medicines?page=${page}&limit=${limit}&search=${search}`).then(r => r.data),
   })
 
   const medicines: Medicine[] = data?.data ?? data ?? []
@@ -128,7 +128,7 @@ export default function MedicinesPage() {
           </div>
         </div>
         <Table columns={columns} data={medicines} loading={isLoading} />
-        <Pagination page={page} total={total} limit={20} onChange={setPage} />
+        <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
       {/* Add Modal */}
