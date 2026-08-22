@@ -1,0 +1,14 @@
+{
+  "name": "abyte-medix",
+  "private": true,
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "server": "npm run start:dev --workspace=server",
+    "client": "npm run dev --workspace=client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm run build --workspace=server && npm run build --workspace=client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

@@ -1,0 +1,21 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.env
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+server/dist/
+server/generated/
+client/dist/
+client/dist-electron/
+client/release/
