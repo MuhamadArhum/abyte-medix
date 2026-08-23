@@ -1,5 +1,6 @@
 {
   "name": "abyte-medix",
+  "version": "1.0.4",
   "private": true,
   "workspaces": ["server", "client"],
   "scripts": {
