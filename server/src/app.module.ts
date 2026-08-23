@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { ThrottlerModule } from '@nestjs/throttler'
+import { ServeStaticModule } from '@nestjs/serve-static'
+import { join } from 'path'
 import { PrismaModule } from './prisma/prisma.module'
 import { AuthModule } from './auth/auth.module'
 import { UsersModule } from './users/users.module'
@@ -20,6 +23,11 @@ import { LicenseModule } from './license/license.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), '..', 'client', 'dist'),
+      exclude: ['/api/(.*)'],
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,

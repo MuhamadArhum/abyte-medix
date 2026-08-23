@@ -6,7 +6,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'app://'],
+    origin: true,
     credentials: true,
   })
 
@@ -20,8 +20,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api')
 
-  const port = process.env.PORT ?? 3001
-  await app.listen(port)
-  console.log(`AbyteMedix server running on port ${port}`)
+  const port = process.env.PORT ?? 5000
+  await app.listen(port, '0.0.0.0')
+  console.log(`AbyteMedix server running on http://0.0.0.0:${port}`)
 }
 bootstrap()
