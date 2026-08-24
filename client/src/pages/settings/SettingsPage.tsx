@@ -122,7 +122,7 @@ export default function SettingsPage() {
               <label className="field-label">Low Stock Threshold</label>
               <input
                 type="number"
-                style={inputCls}
+                className={inputCls}
                 value={form.low_stock_threshold ?? ''}
                 onChange={e => set('low_stock_threshold', e.target.value)}
                 min={0}
@@ -133,7 +133,7 @@ export default function SettingsPage() {
               <label className="field-label">Expiry Alert Days</label>
               <input
                 type="number"
-                style={inputCls}
+                className={inputCls}
                 value={form.expiry_alert_days ?? ''}
                 onChange={e => set('expiry_alert_days', e.target.value)}
                 min={1}
