@@ -9,6 +9,7 @@ import {
 import { api } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
 import PrintA4, { type SaleReceiptData } from '../../components/ui/PrintA4'
+import ShiftBanner from './ShiftBanner'
 
 const C = {
   primary: '#D9A441', primaryDark: '#B8842A',
@@ -392,6 +393,12 @@ export default function POSPage() {
   }, [])
 
 
+  // Current shift
+  const { data: currentShift } = useQuery({
+    queryKey: ['shift-current'],
+    queryFn: () => api.get('/shifts/current').then(r => r.data),
+  })
+
   // Search results
   const { data: searchResults, isFetching: searchLoading } = useQuery({
     queryKey: ['med-search', searchQ],
@@ -680,6 +687,8 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', overflow: 'hidden', background: C.bg }}>
+
+      <ShiftBanner onShiftChange={() => qc.invalidateQueries({ queryKey: ['shift-current'] })} />
 
       {/* ── TOP BAR: Search + Customer ── */}
       <div style={{ display: 'flex', gap: 10, padding: '10px 16px', background: '#fff', borderBottom: `1px solid ${C.border}`, flexShrink: 0, alignItems: 'flex-start' }}>
@@ -1127,11 +1136,11 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
           <button
             ref={checkoutBtnRef}
             onClick={completeSale}
-            disabled={saleMutation.isPending || cart.length === 0}
+            disabled={saleMutation.isPending || cart.length === 0 || !currentShift}
             style={{
               width: '100%', marginTop: 8, padding: '12px', borderRadius: 10, border: 'none',
-              background: cart.length === 0 ? '#C4BA9A' : C.primary, color: '#fff', fontWeight: 700,
-              fontSize: 14, cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+              background: cart.length === 0 || !currentShift ? '#C4BA9A' : C.primary, color: '#fff', fontWeight: 700,
+              fontSize: 14, cursor: cart.length === 0 || !currentShift ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
@@ -1140,6 +1149,11 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
               : <><Receipt size={16} /> Checkout — {fmtRs(total)} <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 4 }}>F8</span></>
             }
           </button>
+          {!currentShift && cart.length > 0 && (
+            <div style={{ fontSize: 11, color: '#C23B2E', textAlign: 'center', marginTop: 5, fontWeight: 600 }}>
+              Open a shift to checkout
+            </div>
+          )}
 
           {/* Held Sales */}
           {heldSales && heldSales.length > 0 && (

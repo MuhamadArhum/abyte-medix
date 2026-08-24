@@ -19,6 +19,7 @@ import { SettingsModule } from './settings/settings.module'
 import { DashboardModule } from './dashboard/dashboard.module'
 import { BackupModule } from './backup/backup.module'
 import { LicenseModule } from './license/license.module'
+import { ShiftsModule } from './shifts/shifts.module'
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { LicenseModule } from './license/license.module'
     DashboardModule,
     BackupModule,
     LicenseModule,
+    ShiftsModule,
   ],
 })
 export class AppModule {}

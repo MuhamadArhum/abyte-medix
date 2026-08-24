@@ -68,6 +68,9 @@ export class SalesService {
     const invoiceNumber = await this.generateInvoiceNumber()
 
     return this.prisma.$transaction(async (tx) => {
+      // Look up current open shift to link sale
+      const currentShift = await tx.shift.findFirst({ where: { status: 'OPEN' }, orderBy: { openedAt: 'desc' } })
+
       // Create sale
       const sale = await tx.sale.create({
         data: {
@@ -84,6 +87,7 @@ export class SalesService {
           changeAmount: dto.changeAmount,
           paymentMethod: dto.paymentMethod as any,
           notes: dto.notes,
+          shiftId: currentShift?.id ?? null,
           items: {
             create: dto.items.map((i) => ({
               batchId: i.batchId,
