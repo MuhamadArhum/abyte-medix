@@ -23,7 +23,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(8,27,48,0.55)',
+      position: 'fixed', inset: 0, background: 'rgba(27,30,33,0.60)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 50, padding: 16,
     }} onClick={onClose}>
@@ -34,7 +34,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
           maxWidth: sizeMap[size], maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
           border: '1px solid var(--rule)',
-          boxShadow: '0 8px 32px rgba(8,27,48,0.18)',
+          boxShadow: '0 8px 32px rgba(27,30,33,0.22)',
         }}
       >
         <div style={{

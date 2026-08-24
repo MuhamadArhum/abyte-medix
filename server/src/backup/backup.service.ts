@@ -85,13 +85,45 @@ export class BackupService {
     ])
   }
 
-  async restorePlaceholder(id: number) {
+  async restore(id: number) {
     const backup = await this.prisma.backup.findUnique({ where: { id } })
     if (!backup) throw new BadRequestException('Backup record not found')
-    return {
-      message: 'Restore requires server restart — contact admin',
-      backupId: id,
-      filename: backup.filename,
+    if (backup.status !== 'SUCCESS') {
+      throw new BadRequestException('Cannot restore from a failed backup')
+    }
+    if (!backup.location || !fs.existsSync(backup.location)) {
+      throw new BadRequestException(`Backup file not found on disk: ${backup.filename}`)
+    }
+
+    const dbUrl = process.env.DATABASE_URL ?? ''
+    let dbName = '', dbUser = 'root', dbPass = '', dbHost = 'localhost', dbPort = '3306'
+    try {
+      const url = new URL(dbUrl)
+      dbUser = url.username
+      dbPass = url.password
+      dbHost = url.hostname
+      dbPort = url.port || '3306'
+      dbName = url.pathname.replace('/', '')
+    } catch {
+      throw new BadRequestException('Could not parse DATABASE_URL for restore')
+    }
+
+    if (!dbName) throw new BadRequestException('Database name could not be determined')
+
+    const passFlag = dbPass ? `-p${dbPass}` : ''
+    const cmd = `mysql -u${dbUser} ${passFlag} -h${dbHost} -P${dbPort} ${dbName} < "${backup.location}"`
+
+    try {
+      await execAsync(cmd)
+      return {
+        success: true,
+        message: `Database successfully restored from ${backup.filename}`,
+        backupId: id,
+        filename: backup.filename,
+        restoredAt: new Date().toISOString(),
+      }
+    } catch (err: any) {
+      throw new BadRequestException(`Restore failed: ${err.stderr ?? err.message}`)
     }
   }
 }

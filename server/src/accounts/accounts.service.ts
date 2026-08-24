@@ -1,15 +1,19 @@
 import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { AuditService } from '../audit/audit.service'
 import { PaymentType } from '@prisma/client'
 
 @Injectable()
 export class AccountsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   // ── Expenses ──────────────────────────────────────────────────────────────
 
-  async createExpense(dto: any) {
-    return this.prisma.expense.create({
+  async createExpense(dto: any, userId?: number) {
+    const expense = await this.prisma.expense.create({
       data: {
         category: dto.category,
         description: dto.description,
@@ -17,6 +21,14 @@ export class AccountsService {
         date: dto.date ? new Date(dto.date) : new Date(),
       },
     })
+    await this.audit.log({
+      userId,
+      module: 'Accounts',
+      action: 'CREATE_EXPENSE',
+      recordId: expense.id,
+      newValue: { category: expense.category, amount: Number(expense.amount), date: expense.date },
+    })
+    return expense
   }
 
   async findExpenses(page = 1, limit = 50, from?: string, to?: string) {
@@ -27,16 +39,17 @@ export class AccountsService {
       if (from) where.date.gte = new Date(from)
       if (to) where.date.lte = new Date(to)
     }
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.expense.findMany({ where, skip, take: limit, orderBy: { date: 'desc' } }),
       this.prisma.expense.count({ where }),
     ])
+    return { data, total }
   }
 
   // ── Income ────────────────────────────────────────────────────────────────
 
-  async createIncome(dto: any) {
-    return this.prisma.income.create({
+  async createIncome(dto: any, userId?: number) {
+    const income = await this.prisma.income.create({
       data: {
         category: dto.category,
         description: dto.description,
@@ -44,6 +57,14 @@ export class AccountsService {
         date: dto.date ? new Date(dto.date) : new Date(),
       },
     })
+    await this.audit.log({
+      userId,
+      module: 'Accounts',
+      action: 'CREATE_INCOME',
+      recordId: income.id,
+      newValue: { category: income.category, amount: Number(income.amount), date: income.date },
+    })
+    return income
   }
 
   async findIncome(page = 1, limit = 50, from?: string, to?: string) {
@@ -54,10 +75,11 @@ export class AccountsService {
       if (from) where.date.gte = new Date(from)
       if (to) where.date.lte = new Date(to)
     }
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.income.findMany({ where, skip, take: limit, orderBy: { date: 'desc' } }),
       this.prisma.income.count({ where }),
     ])
+    return { data, total }
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
@@ -94,7 +116,19 @@ export class AccountsService {
         })
       }
 
-      // TODO: audit log
+      await this.audit.log({
+        userId: dto.userId,
+        module: 'Accounts',
+        action: 'CREATE_PAYMENT',
+        recordId: payment.id,
+        newValue: {
+          type: payment.type,
+          amount: Number(payment.amount),
+          method: payment.method,
+          customerId: payment.customerId,
+          supplierId: payment.supplierId,
+        },
+      })
       return payment
     })
   }
@@ -112,7 +146,7 @@ export class AccountsService {
     if (customerId) where.customerId = customerId
     if (supplierId) where.supplierId = supplierId
 
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
         where,
         include: {
@@ -125,6 +159,7 @@ export class AccountsService {
       }),
       this.prisma.payment.count({ where }),
     ])
+    return { data, total }
   }
 
   // ── Summary ───────────────────────────────────────────────────────────────

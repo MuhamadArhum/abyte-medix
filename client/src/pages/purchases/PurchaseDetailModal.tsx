@@ -5,7 +5,7 @@ import { Printer } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import PrintA4 from '../../components/ui/PrintA4'
 
 interface Props {
@@ -35,13 +35,21 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
   })
 
   const returnMutation = useMutation({
-    mutationFn: () => api.post(`/purchases/${purchaseId}/return`).then(r => r.data),
+    mutationFn: () => api.post(`/purchases/${purchaseId}/return`, {
+      reason: 'Full purchase return',
+      items: (purchase?.items ?? []).map((i: any) => ({
+        batchId: i.batchId,
+        quantity: i.quantity,
+        amount: Number(i.total),
+      })),
+      totalAmount: Number(purchase?.total ?? 0),
+    }).then(r => r.data),
     onSuccess: () => {
       toast.success('Purchase return recorded')
       qc.invalidateQueries({ queryKey: ['purchases'] })
       qc.invalidateQueries({ queryKey: ['purchase', purchaseId] })
     },
-    onError: () => toast.error('Failed to process return'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -69,7 +77,7 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
             </div>
             <div>
               <p className="field-label" style={{ marginBottom: 2 }}>Total</p>
-              <p className="font-semibold">Rs. {Number(purchase.totalAmount).toLocaleString()}</p>
+              <p className="font-semibold">Rs. {Number(purchase.total).toLocaleString()}</p>
             </div>
             <div>
               <p className="field-label" style={{ marginBottom: 2 }}>Paid</p>
@@ -109,7 +117,7 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
           <div className="flex justify-between items-center pt-2">
             <button
               onClick={() => returnMutation.mutate()}
-              disabled={returnMutation.isPending || purchase.status === 'RETURNED'}
+              disabled={returnMutation.isPending || purchase.status === 'DRAFT'}
               className="btn disabled:opacity-50"
               style={{ background: '#FDF2E1', color: '#93630F', border: '1px solid #F5D99C' }}
             >

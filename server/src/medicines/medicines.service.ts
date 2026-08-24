@@ -40,16 +40,24 @@ export class MedicinesService {
         }
       : {}
 
-    const [data, total] = await this.prisma.$transaction([
+    const [medicines, total] = await this.prisma.$transaction([
       this.prisma.medicine.findMany({
         where,
-        include: { category: true, manufacturer: true },
+        include: {
+          category: true,
+          manufacturer: true,
+          batches: { select: { quantity: true } },
+        },
         skip,
         take: limit,
         orderBy: { brandName: 'asc' },
       }),
       this.prisma.medicine.count({ where }),
     ])
+    const data = medicines.map(({ batches, ...m }) => ({
+      ...m,
+      totalQty: batches.reduce((sum, b) => sum + b.quantity, 0),
+    }))
     return { data, total }
   }
 
@@ -80,12 +88,12 @@ export class MedicinesService {
   }
 
   async deactivate(id: number) {
-    const med = await this.findOne(id)
+    await this.findOne(id)
     const hasTx = await this.prisma.saleItem.count({
       where: { batch: { medicineId: id } },
     })
-    if (hasTx > 0) {
-      return this.prisma.medicine.update({ where: { id }, data: { isActive: false } })
+    if (hasTx === 0) {
+      return this.prisma.medicine.delete({ where: { id } })
     }
     return this.prisma.medicine.update({ where: { id }, data: { isActive: false } })
   }

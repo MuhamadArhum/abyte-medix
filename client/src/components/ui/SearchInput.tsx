@@ -25,7 +25,7 @@ export default function SearchInput({ value, onChange, placeholder = 'Search…'
         ref={inputRef}
         type="text" value={local} onChange={(e) => setLocal(e.target.value)} placeholder={placeholder}
         style={{
-          width: '100%', background: '#fff', border: '1px solid var(--rule)', borderRadius: 'var(--radius)',
+          width: '100%', background: 'var(--paper-light)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)',
           padding: '7px 12px 7px 32px', fontSize: 12.5, color: 'var(--ink)',
           outline: 'none', fontFamily: 'var(--font-sans)',
         }}

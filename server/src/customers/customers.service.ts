@@ -97,7 +97,14 @@ export class CustomersService {
     })
 
     const customer = await this.prisma.customer.findUnique({ where: { id } })
-    return { customer, ledger, closingBalance: balance }
+    // Sync stored balance with ledger calculation to prevent drift
+    if (Math.abs(Number(customer!.outstandingBalance) - balance) > 0.001) {
+      await this.prisma.customer.update({
+        where: { id },
+        data: { outstandingBalance: balance },
+      })
+    }
+    return { customer: { ...customer!, outstandingBalance: balance }, ledger, closingBalance: balance }
   }
 
   async creditCheck(id: number, amount: number) {

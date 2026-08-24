@@ -24,6 +24,7 @@ interface CreateSaleDto {
   changeAmount: number
   paymentMethod: string
   notes?: string
+  quotationId?: number
 }
 
 @Injectable()
@@ -119,6 +120,15 @@ export class SalesService {
           where: { id: dto.customerId },
           data: { outstandingBalance: { increment: dto.total - dto.amountPaid } },
         })
+      }
+
+      // If sale was created from a quotation, delete the quotation
+      if (dto.quotationId) {
+        const quot = await tx.sale.findUnique({ where: { id: dto.quotationId } })
+        if (quot && quot.status === 'DRAFT' && quot.invoiceNumber.startsWith('QUOT-')) {
+          await tx.saleItem.deleteMany({ where: { saleId: dto.quotationId } })
+          await tx.sale.delete({ where: { id: dto.quotationId } })
+        }
       }
 
       return sale

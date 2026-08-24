@@ -231,6 +231,7 @@ export default function POSPage() {
   const [showHelp, setShowHelp] = useState(false)
   const [lastReceipt, setLastReceipt] = useState<any>(null)
   const [printData, setPrintData] = useState<SaleReceiptData | null>(null)
+  const [activeQuotationId, setActiveQuotationId] = useState<number | null>(null)
 
   /* ── Load quotation from Quotations page ── */
   useEffect(() => {
@@ -584,6 +585,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
       subtotal, discountAmount: discountAmt, taxAmount: taxAmt, total,
       amountPaid: effectivePaid, changeAmount: Math.max(0, effectivePaid - total), paymentMethod,
       notes: notes || undefined,
+      quotationId: activeQuotationId ?? undefined,
     })
   }
   completeSaleRef.current = completeSale
@@ -596,7 +598,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
 
   const clearCart = () => {
     if (cart.length === 0) return
-    setCart([]); setCustomer(null); setAmountPaid('')
+    setCart([]); setCustomer(null); setAmountPaid(''); setActiveQuotationId(null)
     toast.info('Cart cleared')
     searchRef.current?.focus()
   }
@@ -651,11 +653,13 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
   const restoreQuotation = (quot: any) => {
     setCart(apiItemsToCart(quot.items))
     if (quot.customer) setCustomer(quot.customer)
+    setActiveQuotationId(quot.id)
     toast.success('Quotation loaded into cart')
   }
 
   const newSale = () => {
     setReceipt(null)
+    setActiveQuotationId(null)
     setTimeout(() => { searchRef.current?.focus(); searchRef.current?.select() }, 80)
   }
   newSaleRef.current = newSale

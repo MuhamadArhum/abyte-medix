@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Edit, Key, Shield } from 'lucide-react'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import Table, { type Column } from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
@@ -28,12 +28,8 @@ export default function UsersPage() {
   const [resetUser, setResetUser] = useState<AppUser | null>(null)
   const [permUser, setPermUser] = useState<AppUser | null>(null)
   const [newPwd, setNewPwd] = useState('')
-
-  // Add form
   const [addForm, setAddForm] = useState({ username: '', fullName: '', password: '', role: 'CASHIER' })
-  // Edit form
   const [editForm, setEditForm] = useState({ fullName: '', role: 'CASHIER' })
-  // Permissions state
   const [perms, setPerms] = useState<Record<string, Record<string, boolean>>>({})
 
   const { data: users, isLoading } = useQuery({
@@ -44,28 +40,28 @@ export default function UsersPage() {
   const addMutation = useMutation({
     mutationFn: (p: Record<string, unknown>) => api.post('/users', p).then(r => r.data),
     onSuccess: () => { toast.success('User created'); setAddOpen(false); qc.invalidateQueries({ queryKey: ['users'] }) },
-    onError: (err: any) => toast.error(err.response?.data?.message ?? 'Failed'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const editMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Record<string, unknown> }) =>
       api.patch(`/users/${id}`, payload).then(r => r.data),
     onSuccess: () => { toast.success('User updated'); setEditUser(null); qc.invalidateQueries({ queryKey: ['users'] }) },
-    onError: (err: any) => toast.error(err.response?.data?.message ?? 'Failed'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const resetMutation = useMutation({
     mutationFn: ({ id, password }: { id: number; password: string }) =>
       api.post(`/users/${id}/reset-password`, { password }).then(r => r.data),
     onSuccess: () => { toast.success('Password reset'); setResetUser(null); setNewPwd('') },
-    onError: () => toast.error('Failed to reset password'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const permMutation = useMutation({
     mutationFn: ({ id, permissions }: { id: number; permissions: any[] }) =>
       api.post(`/users/${id}/permissions`, permissions).then(r => r.data),
     onSuccess: () => { toast.success('Permissions updated'); setPermUser(null); qc.invalidateQueries({ queryKey: ['users'] }) },
-    onError: () => toast.error('Failed to update permissions'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const openPermModal = (user: AppUser) => {
@@ -94,11 +90,11 @@ export default function UsersPage() {
   const userList: AppUser[] = users?.data ?? users ?? []
 
   const columns: Column<AppUser>[] = [
-    { key: 'username', label: 'Username' },
+    { key: 'username', label: 'Username', render: r => <span className="mono" style={{ fontWeight: 600 }}>{r.username}</span> },
     { key: 'fullName', label: 'Full Name' },
     {
       key: 'role', label: 'Role', render: r => (
-        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">{r.role}</span>
+        <span className="badge badge-blue">{r.role}</span>
       )
     },
     {
@@ -110,15 +106,15 @@ export default function UsersPage() {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
           <button onClick={() => { setEditUser(r); setEditForm({ fullName: r.fullName, role: r.role }) }}
-            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Edit">
+            className="icon-btn success" title="Edit">
             <Edit size={14} />
           </button>
           <button onClick={() => { setResetUser(r); setNewPwd('') }}
-            className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded" title="Reset Password">
+            className="icon-btn" title="Reset Password" style={{ color: 'var(--amber-warn)' }}>
             <Key size={14} />
           </button>
           <button onClick={() => openPermModal(r)}
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Permissions">
+            className="icon-btn" title="Permissions">
             <Shield size={14} />
           </button>
         </div>
@@ -126,21 +122,22 @@ export default function UsersPage() {
     },
   ]
 
-  const inputCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
-
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Users</h2>
+    <div className="pg">
+      <div className="pg-header">
+        <div>
+          <div className="pg-title">Users</div>
+          <div className="pg-sub">{userList.length} system users</div>
+        </div>
         <button
+          className="btn btn-primary"
           onClick={() => { setAddOpen(true); setAddForm({ username: '', fullName: '', password: '', role: 'CASHIER' }) }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
         >
-          <Plus size={16} /> Add User
+          <Plus size={14} /> Add User
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="card">
         <Table columns={columns} data={userList} loading={isLoading} />
       </div>
 
@@ -148,33 +145,30 @@ export default function UsersPage() {
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add User" size="sm"
         footer={
           <>
-            <button onClick={() => setAddOpen(false)} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button onClick={() => addMutation.mutate(addForm)} disabled={addMutation.isPending}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+            <button className="btn btn-secondary" onClick={() => setAddOpen(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => addMutation.mutate(addForm)} disabled={addMutation.isPending}>
               {addMutation.isPending && <Spinner size="sm" />} Create User
             </button>
           </>
         }
       >
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Username</label>
-            <input className={inputCls} value={addForm.username} onChange={e => setAddForm(p => ({ ...p, username: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
-            <input className={inputCls} value={addForm.fullName} onChange={e => setAddForm(p => ({ ...p, fullName: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-            <input type="password" className={inputCls} value={addForm.password} onChange={e => setAddForm(p => ({ ...p, password: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
-            <select className={inputCls} value={addForm.role} onChange={e => setAddForm(p => ({ ...p, role: e.target.value }))}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
+        <div className="field-group">
+          <label className="field-label">Username</label>
+          <input className="field-input" value={addForm.username} onChange={e => setAddForm(p => ({ ...p, username: e.target.value }))} />
+        </div>
+        <div className="field-group">
+          <label className="field-label">Full Name</label>
+          <input className="field-input" value={addForm.fullName} onChange={e => setAddForm(p => ({ ...p, fullName: e.target.value }))} />
+        </div>
+        <div className="field-group">
+          <label className="field-label">Password</label>
+          <input type="password" className="field-input" value={addForm.password} onChange={e => setAddForm(p => ({ ...p, password: e.target.value }))} />
+        </div>
+        <div className="field-group">
+          <label className="field-label">Role</label>
+          <select className="field-select" value={addForm.role} onChange={e => setAddForm(p => ({ ...p, role: e.target.value }))}>
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
         </div>
       </Modal>
 
@@ -182,25 +176,22 @@ export default function UsersPage() {
       <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} title="Edit User" size="sm"
         footer={
           <>
-            <button onClick={() => setEditUser(null)} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button onClick={() => editUser && editMutation.mutate({ id: editUser.id, payload: editForm })} disabled={editMutation.isPending}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+            <button className="btn btn-secondary" onClick={() => setEditUser(null)}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => editUser && editMutation.mutate({ id: editUser.id, payload: editForm })} disabled={editMutation.isPending}>
               {editMutation.isPending && <Spinner size="sm" />} Save
             </button>
           </>
         }
       >
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
-            <input className={inputCls} value={editForm.fullName} onChange={e => setEditForm(p => ({ ...p, fullName: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
-            <select className={inputCls} value={editForm.role} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
+        <div className="field-group">
+          <label className="field-label">Full Name</label>
+          <input className="field-input" value={editForm.fullName} onChange={e => setEditForm(p => ({ ...p, fullName: e.target.value }))} />
+        </div>
+        <div className="field-group">
+          <label className="field-label">Role</label>
+          <select className="field-select" value={editForm.role} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
         </div>
       </Modal>
 
@@ -208,20 +199,21 @@ export default function UsersPage() {
       <Modal isOpen={!!resetUser} onClose={() => setResetUser(null)} title={`Reset Password — ${resetUser?.username}`} size="sm"
         footer={
           <>
-            <button onClick={() => setResetUser(null)} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button className="btn btn-secondary" onClick={() => setResetUser(null)}>Cancel</button>
             <button
+              className="btn"
+              style={{ background: 'var(--amber-warn)', color: '#fff' }}
               onClick={() => resetUser && resetMutation.mutate({ id: resetUser.id, password: newPwd })}
               disabled={resetMutation.isPending || !newPwd}
-              className="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-600 disabled:opacity-50 flex items-center gap-2"
             >
               {resetMutation.isPending && <Spinner size="sm" />} Reset
             </button>
           </>
         }
       >
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">New Password</label>
-          <input type="password" className={inputCls} value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min 8 characters" />
+        <div className="field-group">
+          <label className="field-label">New Password</label>
+          <input type="password" className="field-input" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min 8 characters" />
         </div>
       </Modal>
 
@@ -229,38 +221,32 @@ export default function UsersPage() {
       <Modal isOpen={!!permUser} onClose={() => setPermUser(null)} title={`Permissions — ${permUser?.fullName}`} size="lg"
         footer={
           <>
-            <button onClick={() => setPermUser(null)} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button onClick={savePermissions} disabled={permMutation.isPending}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+            <button className="btn btn-secondary" onClick={() => setPermUser(null)}>Cancel</button>
+            <button className="btn btn-primary" onClick={savePermissions} disabled={permMutation.isPending}>
               {permMutation.isPending && <Spinner size="sm" />} Save Permissions
             </button>
           </>
         }
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="tbl">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase font-semibold">Module</th>
-                {ACTIONS.map(a => (
-                  <th key={a} className="px-3 py-2 text-center text-xs text-gray-500 uppercase font-semibold">{a}</th>
-                ))}
+              <tr>
+                <th>Module</th>
+                {ACTIONS.map(a => <th key={a} style={{ textAlign: 'center' }}>{a}</th>)}
               </tr>
             </thead>
             <tbody>
               {MODULES.map(mod => (
-                <tr key={mod} className="border-t border-gray-100">
-                  <td className="px-3 py-2 font-medium text-gray-700">{mod}</td>
+                <tr key={mod}>
+                  <td style={{ fontWeight: 600 }}>{mod}</td>
                   {ACTIONS.map(act => (
-                    <td key={act} className="px-3 py-2 text-center">
+                    <td key={act} style={{ textAlign: 'center' }}>
                       <input
                         type="checkbox"
                         checked={perms[mod]?.[act] ?? false}
-                        onChange={e => setPerms(prev => ({
-                          ...prev,
-                          [mod]: { ...prev[mod], [act]: e.target.checked }
-                        }))}
-                        className="w-4 h-4 text-blue-600 rounded"
+                        onChange={e => setPerms(prev => ({ ...prev, [mod]: { ...prev[mod], [act]: e.target.checked } }))}
+                        style={{ width: 15, height: 15, accentColor: 'var(--orange)', cursor: 'pointer' }}
                       />
                     </td>
                   ))}

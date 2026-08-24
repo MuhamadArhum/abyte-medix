@@ -23,6 +23,6 @@ export class BackupController {
 
   @Post(':id/restore')
   restore(@Param('id') id: string) {
-    return this.backup.restorePlaceholder(+id)
+    return this.backup.restore(+id)
   }
 }

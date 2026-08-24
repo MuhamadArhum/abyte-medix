@@ -79,7 +79,7 @@ export default function AuditPage() {
         <div style={{ fontSize: 12.5, color: 'var(--steel)', marginTop: 2 }}>Full activity trail for all system actions</div>
       </div>
 
-      <div style={{ background: '#FFFFFF', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--paper-light)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--rule)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <select value={userId} onChange={e => { setUserId(e.target.value); setPage(1) }} style={filterSel}>
             <option value="">All Users</option>

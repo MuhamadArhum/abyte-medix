@@ -20,6 +20,13 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+const card: React.CSSProperties = {
+  background: 'var(--paper-light)', border: '1px solid var(--rule)',
+  borderRadius: 'var(--radius)', padding: 24,
+}
+const labelSm: React.CSSProperties = { fontSize: 11, color: 'var(--steel)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em' }
+const valueSm: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginTop: 2 }
+
 export default function BackupPage() {
   const qc = useQueryClient()
 
@@ -55,40 +62,40 @@ export default function BackupPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, alignItems: 'start' }}>
         {/* Status Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(62,142,90,0.12)' }}>
-              <HardDrive size={20} style={{ color: '#17B978' }} />
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 'var(--radius)', background: 'rgba(62,142,90,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <HardDrive size={18} style={{ color: 'var(--green-ok)' }} />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800">Backup Status</h3>
-              <p className="text-xs text-gray-400">Last backup info</p>
+              <div style={{ fontFamily: 'var(--font-oswald)', fontWeight: 600, fontSize: 14, color: 'var(--blueprint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Backup Status</div>
+              <div style={labelSm}>Last backup info</div>
             </div>
           </div>
 
           {lastBackup ? (
-            <div className="space-y-2 text-sm">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <p className="text-xs text-gray-400">Last Backup</p>
-                <p className="font-medium">{new Date(lastBackup.createdAt).toLocaleString()}</p>
+                <div style={labelSm}>Last Backup</div>
+                <div style={valueSm}>{new Date(lastBackup.createdAt).toLocaleString()}</div>
               </div>
               <div>
-                <p className="text-xs text-gray-400">File</p>
-                <p className="font-medium text-xs truncate">{lastBackup.filename}</p>
+                <div style={labelSm}>File</div>
+                <div style={{ ...valueSm, fontSize: 11, wordBreak: 'break-all' }}>{lastBackup.filename}</div>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Size</p>
-                <p className="font-medium">{formatBytes(lastBackup.size ?? 0)}</p>
+                <div style={labelSm}>Size</div>
+                <div style={valueSm}>{formatBytes(lastBackup.size ?? 0)}</div>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Status</p>
+                <div style={labelSm}>Status</div>
                 <Badge label={lastBackup.status ?? 'COMPLETE'} variant="green" />
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-400">No backups found</p>
+            <div style={{ fontSize: 13, color: 'var(--steel)' }}>No backups found</div>
           )}
 
           <button
@@ -105,8 +112,8 @@ export default function BackupPage() {
         </div>
 
         {/* Backup History */}
-        <div className="lg:col-span-2 card">
-          <div className="px-5 py-4 card-divider" style={{ borderBottom: '1px solid var(--rule)' }}>
+        <div className="card">
+          <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--rule)' }}>
             <h3 className="card-title" style={{ marginBottom: 0 }}>Backup History</h3>
           </div>
           {isLoading ? (
@@ -122,11 +129,11 @@ export default function BackupPage() {
               </thead>
               <tbody>
                 {backupList.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-10 text-gray-400">No backups found</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--steel)', fontSize: 13 }}>No backups found</td></tr>
                 ) : (
                   backupList.map((b) => (
                     <tr key={b.id}>
-                      <td className="text-xs truncate max-w-xs">{b.filename}</td>
+                      <td style={{ fontSize: 11, wordBreak: 'break-all', maxWidth: 240 }}>{b.filename}</td>
                       <td>{formatBytes(b.size ?? 0)}</td>
                       <td><Badge label={b.status ?? 'COMPLETE'} variant="green" /></td>
                       <td>{new Date(b.createdAt).toLocaleString()}</td>
@@ -138,8 +145,12 @@ export default function BackupPage() {
                             }
                           }}
                           disabled={restoreMutation.isPending}
-                          className="text-xs font-medium border px-2 py-1 rounded disabled:opacity-50"
-                          style={{ color: '#93630F', borderColor: '#F5D99C', background: '#FDF2E1' }}
+                          style={{
+                            fontSize: 11, fontWeight: 600, border: '1px solid var(--rule)',
+                            padding: '3px 10px', borderRadius: 'var(--radius)', cursor: 'pointer',
+                            color: 'var(--amber-warn)', background: 'rgba(201,138,30,0.08)',
+                            fontFamily: 'var(--font-mono)', opacity: restoreMutation.isPending ? 0.5 : 1,
+                          }}
                         >
                           Restore
                         </button>

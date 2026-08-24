@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
 
@@ -50,7 +50,7 @@ export default function AccountsPage() {
   const [payOpen, setPayOpen] = useState(false)
   const [expForm, setExpForm] = useState({ category: '', description: '', amount: '', date: today })
   const [incForm, setIncForm] = useState({ category: '', description: '', amount: '', date: today })
-  const [payForm, setPayForm] = useState({ type: 'CUSTOMER', entityId: '', amount: '', method: 'CASH', notes: '' })
+  const [payForm, setPayForm] = useState({ type: 'CUSTOMER_RECEIPT', entityId: '', amount: '', method: 'CASH', notes: '' })
 
   const { data: summary } = useQuery({ queryKey: ['accounts-summary', from, to], queryFn: () => api.get(`/accounts/summary?from=${from}&to=${to}`).then(r => r.data), enabled: tab === 'summary' })
   const { data: expenses, isLoading: expLoading } = useQuery({ queryKey: ['expenses'], queryFn: () => api.get('/accounts/expenses').then(r => r.data), enabled: tab === 'expenses' })
@@ -60,9 +60,9 @@ export default function AccountsPage() {
   const { data: customers } = useQuery({ queryKey: ['customers-list'], queryFn: () => api.get('/customers?limit=500').then(r => r.data), enabled: payOpen })
   const { data: suppliers } = useQuery({ queryKey: ['suppliers-list'], queryFn: () => api.get('/suppliers?limit=500').then(r => r.data), enabled: payOpen })
 
-  const expMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/expenses', p).then(r => r.data), onSuccess: () => { toast.success('Expense added'); setExpOpen(false); qc.invalidateQueries({ queryKey: ['expenses'] }) }, onError: () => toast.error('Failed') })
-  const incMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/income', p).then(r => r.data), onSuccess: () => { toast.success('Income added'); setIncOpen(false); qc.invalidateQueries({ queryKey: ['income'] }) }, onError: () => toast.error('Failed') })
-  const payMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/payments', p).then(r => r.data), onSuccess: () => { toast.success('Payment recorded'); setPayOpen(false); qc.invalidateQueries({ queryKey: ['payments'] }) }, onError: () => toast.error('Failed') })
+  const expMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/expenses', p).then(r => r.data), onSuccess: () => { toast.success('Expense added'); setExpOpen(false); qc.invalidateQueries({ queryKey: ['expenses'] }) }, onError: (err) => toast.error(getApiError(err)) })
+  const incMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/income', p).then(r => r.data), onSuccess: () => { toast.success('Income added'); setIncOpen(false); qc.invalidateQueries({ queryKey: ['income'] }) }, onError: (err) => toast.error(getApiError(err)) })
+  const payMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/payments', p).then(r => r.data), onSuccess: () => { toast.success('Payment recorded'); setPayOpen(false); qc.invalidateQueries({ queryKey: ['payments'] }) }, onError: (err) => toast.error(getApiError(err)) })
 
   const custList = customers?.data ?? customers ?? []
   const supList = suppliers?.data ?? suppliers ?? []
@@ -222,9 +222,9 @@ export default function AccountsPage() {
 
       {/* Payment Modal */}
       <Modal isOpen={payOpen} onClose={() => setPayOpen(false)} title="Record Payment" size="sm"
-        footer={<><button className="btn btn-secondary" onClick={() => setPayOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={payMutation.isPending} onClick={() => payMutation.mutate({ type: payForm.type, ...(payForm.type === 'CUSTOMER' ? { customerId: +payForm.entityId } : { supplierId: +payForm.entityId }), amount: parseFloat(payForm.amount), method: payForm.method, notes: payForm.notes || undefined })}>{payMutation.isPending && <Spinner size="sm" />}Record</button></>}>
-        <div className="field-group"><label className="field-label">Type</label><select className="field-select" value={payForm.type} onChange={e => setPayForm(p => ({ ...p, type: e.target.value, entityId: '' }))}><option value="CUSTOMER">Customer Payment Received</option><option value="SUPPLIER">Supplier Payment Made</option></select></div>
-        <div className="field-group"><label className="field-label">{payForm.type === 'CUSTOMER' ? 'Customer' : 'Supplier'}</label><select className="field-select" value={payForm.entityId} onChange={e => setPayForm(p => ({ ...p, entityId: e.target.value }))}><option value="">Select…</option>{(payForm.type === 'CUSTOMER' ? custList : supList).map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+        footer={<><button className="btn btn-secondary" onClick={() => setPayOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={payMutation.isPending} onClick={() => payMutation.mutate({ type: payForm.type, ...(payForm.type === 'CUSTOMER_RECEIPT' ? { customerId: +payForm.entityId } : { supplierId: +payForm.entityId }), amount: parseFloat(payForm.amount), method: payForm.method, notes: payForm.notes || undefined })}>{payMutation.isPending && <Spinner size="sm" />}Record</button></>}>
+        <div className="field-group"><label className="field-label">Type</label><select className="field-select" value={payForm.type} onChange={e => setPayForm(p => ({ ...p, type: e.target.value, entityId: '' }))}><option value="CUSTOMER_RECEIPT">Customer Payment Received</option><option value="SUPPLIER_PAYMENT">Supplier Payment Made</option></select></div>
+        <div className="field-group"><label className="field-label">{payForm.type === 'CUSTOMER_RECEIPT' ? 'Customer' : 'Supplier'}</label><select className="field-select" value={payForm.entityId} onChange={e => setPayForm(p => ({ ...p, entityId: e.target.value }))}><option value="">Select…</option>{(payForm.type === 'CUSTOMER_RECEIPT' ? custList : supList).map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="field-group"><label className="field-label">Amount (Rs.)</label><input type="number" className="field-input" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} /></div>
           <div className="field-group"><label className="field-label">Method</label><select className="field-select" value={payForm.method} onChange={e => setPayForm(p => ({ ...p, method: e.target.value }))}><option value="CASH">Cash</option><option value="BANK">Bank</option><option value="CHEQUE">Cheque</option></select></div>

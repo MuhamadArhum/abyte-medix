@@ -57,7 +57,13 @@ export class PurchasesService {
         data: {
           invoiceNumber,
           supplierId: dto.supplierId,
-          status: (dto.status as PurchaseStatus) ?? PurchaseStatus.RECEIVED,
+          status: (() => {
+            const paid = Number(dto.amountPaid ?? 0)
+            const total = Number(dto.total)
+            if (paid >= total) return PurchaseStatus.RECEIVED
+            if (paid > 0) return PurchaseStatus.PARTIAL
+            return PurchaseStatus.RECEIVED
+          })(),
           subtotal: dto.subtotal,
           discountAmount: dto.discountAmount ?? 0,
           taxAmount: dto.taxAmount ?? 0,

@@ -10,6 +10,8 @@ import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import AddPurchaseForm from './AddPurchaseForm'
 import PurchaseDetailModal from './PurchaseDetailModal'
+import { useAuthStore } from '../../store/auth.store'
+import { ACTION_ROLES, canRole } from '../../config/rbac'
 
 function KbdTag({ children }: { children: React.ReactNode }) {
   return (
@@ -34,6 +36,8 @@ const iconBtn: React.CSSProperties = {
 
 export default function PurchasesPage() {
   const qc = useQueryClient()
+  const user = useAuthStore(s => s.user)
+  const canAdd = canRole(user?.role, ACTION_ROLES.purchases.add)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
@@ -43,8 +47,10 @@ export default function PurchasesPage() {
 
   const addOpenRef = useRef(addOpen)
   const viewPurchaseRef = useRef(viewPurchase)
+  const canAddRef = useRef(canAdd)
   addOpenRef.current = addOpen
   viewPurchaseRef.current = viewPurchase
+  canAddRef.current = canAdd
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -55,7 +61,7 @@ export default function PurchasesPage() {
         e.preventDefault()
         searchRef.current?.focus()
         searchRef.current?.select()
-      } else if ((e.key === 'F3' || e.key === 'Insert') && !inInput) {
+      } else if ((e.key === 'F3' || e.key === 'Insert') && !inInput && canAddRef.current) {
         e.preventDefault()
         if (!addOpenRef.current && !viewPurchaseRef.current) setAddOpen(true)
       } else if (e.key === 'Escape') {
@@ -82,7 +88,7 @@ export default function PurchasesPage() {
     { key: 'supplier', label: 'Supplier', render: r => <span style={{ fontWeight: 600 }}>{r.supplier?.name ?? '—'}</span> },
     { key: 'purchaseDate', label: 'Date', render: r => <span style={{ color: 'var(--steel)' }}>{new Date(r.purchaseDate).toLocaleDateString()}</span> },
     { key: 'total', label: 'Total', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Rs. {Number(r.total).toLocaleString()}</span> },
-    { key: 'amountPaid', label: 'Paid', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: '#2F8F5F' }}>Rs. {Number(r.amountPaid).toLocaleString()}</span> },
+    { key: 'amountPaid', label: 'Paid', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-ok)' }}>Rs. {Number(r.amountPaid).toLocaleString()}</span> },
     { key: 'status', label: 'Status', render: r => <Badge label={r.status} variant={statusVariant(r.status) as any} /> },
     { key: 'actions', label: '', render: r => (
       <button onClick={() => setViewPurchase(r)} style={iconBtn} title="View"
@@ -104,17 +110,19 @@ export default function PurchasesPage() {
           <h1 style={{ fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 19, color: 'var(--ink)' }}>Purchases</h1>
           <div style={{ fontSize: 12.5, color: 'var(--steel)', marginTop: 2 }}>Stock purchase records and payment tracking</div>
         </div>
-        <button onClick={() => setAddOpen(true)} style={{
-          background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 'var(--radius)',
-          padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)',
-        }}>
-          <Plus size={15} /> New Purchase
-          <span style={{ opacity: 0.7, fontSize: 10, fontFamily: 'var(--font-mono)', background: 'rgba(255,255,255,0.2)', borderRadius: 3, padding: '1px 4px' }}>F3</span>
-        </button>
+        {canAdd && (
+          <button onClick={() => setAddOpen(true)} style={{
+            background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 'var(--radius)',
+            padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)',
+          }}>
+            <Plus size={15} /> New Purchase
+            <span style={{ opacity: 0.7, fontSize: 10, fontFamily: 'var(--font-mono)', background: 'rgba(255,255,255,0.2)', borderRadius: 3, padding: '1px 4px' }}>F3</span>
+          </button>
+        )}
       </div>
 
-      <div style={{ background: '#FFFFFF', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--paper-light)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--rule)' }}>
           <SearchInput inputRef={searchRef} value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search by invoice or supplier… (F2)" />
         </div>

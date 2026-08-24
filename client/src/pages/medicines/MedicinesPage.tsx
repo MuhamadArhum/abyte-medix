@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Eye, Edit, PowerOff } from 'lucide-react'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import Table, { type Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 import SearchInput from '../../components/ui/SearchInput'
@@ -11,6 +11,8 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Badge from '../../components/ui/Badge'
 import MedicineForm from './MedicineForm'
 import BatchListModal from './BatchListModal'
+import { useAuthStore } from '../../store/auth.store'
+import { ACTION_ROLES, canRole } from '../../config/rbac'
 
 interface Medicine {
   id: number
@@ -34,6 +36,10 @@ interface Medicine {
 
 export default function MedicinesPage() {
   const qc = useQueryClient()
+  const user = useAuthStore(s => s.user)
+  const canAdd = canRole(user?.role, ACTION_ROLES.medicines.add)
+  const canEdit = canRole(user?.role, ACTION_ROLES.medicines.edit)
+  const canDeactivate = canRole(user?.role, ACTION_ROLES.medicines.deactivate)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
@@ -57,50 +63,40 @@ export default function MedicinesPage() {
       setDeactivateMed(null)
       qc.invalidateQueries({ queryKey: ['medicines'] })
     },
-    onError: () => toast.error('Failed to deactivate'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const columns: Column<Medicine>[] = [
-    { key: 'productCode', label: 'Code' },
+    { key: 'productCode', label: 'Code', render: r => <span className="mono" style={{ fontSize: 12 }}>{r.productCode}</span> },
     { key: 'brandName', label: 'Brand Name' },
-    { key: 'genericName', label: 'Generic Name' },
-    { key: 'category', label: 'Category', render: (r) => r.category?.name ?? '—' },
+    { key: 'genericName', label: 'Generic', render: r => <span style={{ color: 'var(--steel)', fontSize: 12 }}>{r.genericName}</span> },
+    { key: 'category', label: 'Category', render: r => r.category?.name ?? '—' },
     {
-      key: 'totalQty', label: 'Stock', render: (r) => (
-        <span className={Number(r.totalQty) <= r.reorderLevel ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+      key: 'totalQty', label: 'Stock', render: r => (
+        <span className="mono" style={{ color: Number(r.totalQty) <= r.reorderLevel ? 'var(--red-risk)' : 'var(--ink)', fontWeight: Number(r.totalQty) <= r.reorderLevel ? 700 : 400 }}>
           {Number(r.totalQty)}
         </span>
       )
     },
-    { key: 'reorderLevel', label: 'Reorder', render: (r) => String(r.reorderLevel) },
+    { key: 'reorderLevel', label: 'Reorder', render: r => <span className="mono">{r.reorderLevel}</span> },
     {
-      key: 'isActive', label: 'Status', render: (r) => (
+      key: 'isActive', label: 'Status', render: r => (
         <Badge label={r.isActive ? 'Active' : 'Inactive'} variant={r.isActive ? 'green' : 'gray'} />
       )
     },
     {
-      key: 'actions', label: 'Actions', render: (r) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setBatchMed(r)}
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-            title="View Batches"
-          >
+      key: 'actions', label: 'Actions', render: r => (
+        <div className="flex items-center gap-1">
+          <button onClick={() => setBatchMed(r)} className="icon-btn" title="View Batches">
             <Eye size={14} />
           </button>
-          <button
-            onClick={() => setEditMed(r)}
-            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
-            title="Edit"
-          >
-            <Edit size={14} />
-          </button>
-          {r.isActive && (
-            <button
-              onClick={() => setDeactivateMed(r)}
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-              title="Deactivate"
-            >
+          {canEdit && (
+            <button onClick={() => setEditMed(r)} className="icon-btn success" title="Edit">
+              <Edit size={14} />
+            </button>
+          )}
+          {canDeactivate && r.isActive && (
+            <button onClick={() => setDeactivateMed(r)} className="icon-btn danger" title="Deactivate">
               <PowerOff size={14} />
             </button>
           )}
@@ -110,28 +106,27 @@ export default function MedicinesPage() {
   ]
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Medicines</h2>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus size={16} /> Add Medicine
-        </button>
+    <div className="pg">
+      <div className="pg-header">
+        <div>
+          <div className="pg-title">Medicines</div>
+          <div className="pg-sub">{total} total medicines</div>
+        </div>
+        {canAdd && (
+          <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
+            <Plus size={14} /> Add Medicine
+          </button>
+        )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <div className="w-72">
-            <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search medicines..." />
-          </div>
+      <div className="card">
+        <div className="filter-bar">
+          <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search by name, code or barcode..." />
         </div>
         <Table columns={columns} data={medicines} loading={isLoading} />
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
-      {/* Add Modal */}
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Medicine" size="lg">
         <MedicineForm
           onSuccess={() => { setAddOpen(false); qc.invalidateQueries({ queryKey: ['medicines'] }) }}
@@ -139,7 +134,6 @@ export default function MedicinesPage() {
         />
       </Modal>
 
-      {/* Edit Modal */}
       <Modal isOpen={!!editMed} onClose={() => setEditMed(null)} title="Edit Medicine" size="lg">
         {editMed && (
           <MedicineForm
@@ -150,21 +144,16 @@ export default function MedicinesPage() {
         )}
       </Modal>
 
-      {/* Batch List Modal */}
       {batchMed && (
-        <BatchListModal
-          medicine={batchMed}
-          onClose={() => setBatchMed(null)}
-        />
+        <BatchListModal medicine={batchMed} onClose={() => setBatchMed(null)} />
       )}
 
-      {/* Deactivate Confirm */}
       <ConfirmDialog
         isOpen={!!deactivateMed}
         onClose={() => setDeactivateMed(null)}
         onConfirm={() => deactivateMed && deactivateMutation.mutate(deactivateMed.id)}
         title="Deactivate Medicine"
-        message={`Are you sure you want to deactivate "${deactivateMed?.brandName}"?`}
+        message={`Deactivate "${deactivateMed?.brandName}"? It will be hidden from POS search.`}
         confirmLabel="Deactivate"
         loading={deactivateMutation.isPending}
       />

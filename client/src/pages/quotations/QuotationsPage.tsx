@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { FileText, Trash2, Eye, Printer, ShoppingCart, X, Plus } from 'lucide-react'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
+import { useAuthStore } from '../../store/auth.store'
+import { ACTION_ROLES, canRole } from '../../config/rbac'
 
 const C = {
   primary: '#E85D1F', bg: '#ECE8DB', border: '#D3CDBA',
@@ -50,6 +52,9 @@ interface Quotation {
 export default function QuotationsPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const user = useAuthStore(s => s.user)
+  const canDelete = canRole(user?.role, ACTION_ROLES.quotations.delete)
+  const canLoad = canRole(user?.role, ACTION_ROLES.quotations.load)
   const [selected, setSelected] = useState<Quotation | null>(null)
   const [printing, setPrinting] = useState(false)
 
@@ -65,11 +70,11 @@ export default function QuotationsPage() {
       setSelected(null)
       qc.invalidateQueries({ queryKey: ['quotations'] })
     },
-    onError: () => toast.error('Failed to delete'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const loadToPOS = (q: Quotation) => {
-    sessionStorage.setItem('pos_load_quotation', JSON.stringify(q))
+    localStorage.setItem('pos_load_quotation', JSON.stringify(q))
     navigate('/pos')
     toast.info('Quotation loaded into POS cart')
   }
@@ -227,21 +232,25 @@ export default function QuotationsPage() {
                       >
                         <Printer size={14} />
                       </button>
-                      <button
-                        onClick={() => loadToPOS(q)}
-                        className="icon-btn success" title="Load to POS"
-                      >
-                        <ShoppingCart size={14} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete quotation ${q.invoiceNumber}?`))
-                            deleteMutation.mutate(q.id)
-                        }}
-                        className="icon-btn danger" title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {canLoad && (
+                        <button
+                          onClick={() => loadToPOS(q)}
+                          className="icon-btn success" title="Load to POS"
+                        >
+                          <ShoppingCart size={14} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete quotation ${q.invoiceNumber}?`))
+                              deleteMutation.mutate(q.id)
+                          }}
+                          className="icon-btn danger" title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -290,16 +299,18 @@ export default function QuotationsPage() {
                 >
                   <Printer size={13} /> Print
                 </button>
-                <button
-                  onClick={() => loadToPOS(selected)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 14px', borderRadius: 8, border: 'none',
-                    background: C.primary, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                  }}
-                >
-                  <ShoppingCart size={13} /> Load to POS
-                </button>
+                {canLoad && (
+                  <button
+                    onClick={() => loadToPOS(selected)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 14px', borderRadius: 8, border: 'none',
+                      background: C.primary, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                    }}
+                  >
+                    <ShoppingCart size={13} /> Load to POS
+                  </button>
+                )}
                 <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.faint, padding: 4 }}>
                   <X size={16} />
                 </button>
@@ -400,30 +411,34 @@ export default function QuotationsPage() {
 
               {/* Footer actions */}
               <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    if (confirm(`Delete quotation ${selected.invoiceNumber}?`))
-                      deleteMutation.mutate(selected.id)
-                  }}
-                  disabled={deleteMutation.isPending}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 16px', borderRadius: 9, border: 'none',
-                    background: C.dangerBg, color: C.danger, fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                  }}
-                >
-                  {deleteMutation.isPending ? <Spinner size="sm" /> : <Trash2 size={14} />} Delete
-                </button>
-                <button
-                  onClick={() => loadToPOS(selected)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 20px', borderRadius: 9, border: 'none',
-                    background: C.primary, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-                  }}
-                >
-                  <ShoppingCart size={14} /> Convert to Sale
-                </button>
+                {canDelete && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete quotation ${selected.invoiceNumber}?`))
+                        deleteMutation.mutate(selected.id)
+                    }}
+                    disabled={deleteMutation.isPending}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 16px', borderRadius: 9, border: 'none',
+                      background: C.dangerBg, color: C.danger, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    }}
+                  >
+                    {deleteMutation.isPending ? <Spinner size="sm" /> : <Trash2 size={14} />} Delete
+                  </button>
+                )}
+                {canLoad && (
+                  <button
+                    onClick={() => loadToPOS(selected)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 20px', borderRadius: 9, border: 'none',
+                      background: C.primary, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                    }}
+                  >
+                    <ShoppingCart size={14} /> Convert to Sale
+                  </button>
+                )}
               </div>
             </div>
           </div>

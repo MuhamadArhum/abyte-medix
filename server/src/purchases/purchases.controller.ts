@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { PurchasesService } from './purchases.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
 
 @UseGuards(JwtAuthGuard)
 @Controller('purchases')
@@ -8,8 +9,8 @@ export class PurchasesController {
   constructor(private purchases: PurchasesService) {}
 
   @Post()
-  create(@Body() body: any) {
-    return this.purchases.create(body)
+  create(@Body() body: any, @CurrentUser() user: any) {
+    return this.purchases.create({ ...body, userId: user?.id })
   }
 
   @Get()
@@ -35,7 +36,7 @@ export class PurchasesController {
   }
 
   @Post(':id/return')
-  createReturn(@Param('id') id: string, @Body() body: any) {
-    return this.purchases.createReturn(+id, body)
+  createReturn(@Param('id') id: string, @Body() body: any, @CurrentUser() user: any) {
+    return this.purchases.createReturn(+id, { ...body, userId: user?.id })
   }
 }

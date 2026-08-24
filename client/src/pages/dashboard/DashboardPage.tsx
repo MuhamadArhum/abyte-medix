@@ -9,9 +9,9 @@ import {
 const C = {
   primary: 'var(--orange)', border: 'var(--rule)', text: 'var(--ink)',
   subtext: 'var(--steel)', faint: 'var(--steel)',
-  warn: '#B45309', warnBg: '#FEF3C7',
-  danger: '#C24444', dangerBg: '#FDE7E7',
-  expiry: '#9A3412', expiryBg: '#FFE4D5',
+  warn: 'var(--amber-warn)', warnBg: 'rgba(201,138,30,0.14)',
+  danger: 'var(--red-risk)', dangerBg: 'rgba(194,59,46,0.12)',
+  expiry: 'var(--orange-deep)', expiryBg: 'rgba(217,164,65,0.15)',
 }
 const MONO: React.CSSProperties = { fontFamily: 'var(--font-mono)' }
 
@@ -20,7 +20,7 @@ function StatCard({ icon: Icon, label, value, tint }: {
 }) {
   return (
     <div style={{
-      background: '#fff', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)',
+      background: 'var(--paper-light)', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)',
       padding: 14, display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 150,
     }}>
       <div style={{
@@ -104,7 +104,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
 
         {/* Recent Sales */}
-        <div style={{ flex: '1 1 360px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)', padding: 16 }}>
+        <div style={{ flex: '1 1 360px', background: 'var(--paper-light)', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)', padding: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.text }}>Recent Sales</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -132,7 +132,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Purchases */}
-        <div style={{ flex: '1 1 360px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)', padding: 16 }}>
+        <div style={{ flex: '1 1 360px', background: 'var(--paper-light)', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)', padding: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.text }}>Recent Purchases</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Needs Attention */}
-        <div style={{ flex: '1 1 300px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)', padding: 16 }}>
+        <div style={{ flex: '1 1 300px', background: 'var(--paper-light)', border: `1px solid ${C.border}`, borderRadius: 'var(--radius)', padding: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.text }}>Needs Attention</div>
 
           {lowStock.slice(0, 4).map((m: any) => (

@@ -55,7 +55,7 @@ export default function AppLayout() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '18px 14px 16px',
-          borderBottom: '1px solid rgba(154,198,232,0.12)',
+          borderBottom: '1px solid rgba(201,205,209,0.12)',
         }}>
           <div style={{
             width: 28, height: 28, background: 'var(--orange)',
@@ -107,22 +107,22 @@ export default function AppLayout() {
                 fontFamily: 'var(--font-mono)', fontSize: 11,
                 fontWeight: isActive ? 600 : 400,
                 textTransform: 'uppercase', letterSpacing: '0.04em',
-                color: isActive ? '#fff' : 'rgba(154,198,232,0.55)',
-                background: isActive ? 'rgba(232,93,31,0.12)' : 'transparent',
+                color: isActive ? '#fff' : 'rgba(201,205,209,0.55)',
+                background: isActive ? 'rgba(217,164,65,0.12)' : 'transparent',
                 transition: 'all 0.12s',
               })}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement
                 if (!el.style.background.includes('0.12')) {
-                  el.style.background = 'rgba(154,198,232,0.06)'
-                  el.style.color = 'rgba(154,198,232,0.85)'
+                  el.style.background = 'rgba(201,205,209,0.06)'
+                  el.style.color = 'rgba(201,205,209,0.85)'
                 }
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement
                 if (!el.style.background.includes('0.12')) {
                   el.style.background = 'transparent'
-                  el.style.color = 'rgba(154,198,232,0.55)'
+                  el.style.color = 'rgba(201,205,209,0.55)'
                 }
               }}
             >
@@ -134,7 +134,7 @@ export default function AppLayout() {
 
         {/* Footer */}
         <div style={{
-          borderTop: '1px solid rgba(154,198,232,0.12)',
+          borderTop: '1px solid rgba(201,205,209,0.12)',
           paddingTop: 10, marginTop: 8, padding: '10px 8px 0',
         }}>
           <button
@@ -144,18 +144,18 @@ export default function AppLayout() {
               padding: '8px 10px', width: '100%', borderRadius: 'var(--radius)',
               fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 400,
               textTransform: 'uppercase', letterSpacing: '0.04em',
-              color: 'rgba(154,198,232,0.4)',
+              color: 'rgba(201,205,209,0.4)',
               transition: 'color 0.15s',
             }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--red-risk)' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(154,198,232,0.4)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(201,205,209,0.4)' }}
           >
             <LogOut size={14} />
             Sign Out
           </button>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 9.5,
-            color: 'rgba(154,198,232,0.3)',
+            color: 'rgba(201,205,209,0.3)',
             padding: '4px 10px 0',
             textTransform: 'uppercase', letterSpacing: '0.04em',
           }}>

@@ -178,7 +178,7 @@ export default function InventoryPage() {
                 style={{
                   padding: '5px 12px', borderRadius: 'var(--radius)', fontSize: 12, fontWeight: 600,
                   border: invFilter === f ? 'none' : '1px solid var(--rule)',
-                  background: invFilter === f ? 'var(--orange)' : '#fff',
+                  background: invFilter === f ? 'var(--orange)' : 'var(--paper-light)',
                   color: invFilter === f ? '#fff' : 'var(--steel)',
                   cursor: 'pointer',
                 }}

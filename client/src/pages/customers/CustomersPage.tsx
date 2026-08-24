@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Edit, Trash2, BookOpen } from 'lucide-react'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import Table, { type Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 import SearchInput from '../../components/ui/SearchInput'
@@ -11,6 +11,8 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Badge from '../../components/ui/Badge'
 import CustomerForm from './CustomerForm'
 import CustomerLedger from './CustomerLedger'
+import { useAuthStore } from '../../store/auth.store'
+import { ACTION_ROLES, canRole } from '../../config/rbac'
 
 interface Customer {
   id: number
@@ -25,6 +27,10 @@ interface Customer {
 
 export default function CustomersPage() {
   const qc = useQueryClient()
+  const user = useAuthStore(s => s.user)
+  const canAdd = canRole(user?.role, ACTION_ROLES.customers.add)
+  const canEdit = canRole(user?.role, ACTION_ROLES.customers.edit)
+  const canDeactivate = canRole(user?.role, ACTION_ROLES.customers.deactivate)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
@@ -44,20 +50,24 @@ export default function CustomersPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/customers/${id}`).then(r => r.data),
     onSuccess: () => {
-      toast.success('Customer deleted')
+      toast.success('Customer deactivated')
       setDeleteCustomer(null)
       qc.invalidateQueries({ queryKey: ['customers'] })
     },
-    onError: () => toast.error('Failed to delete'),
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const columns: Column<Customer>[] = [
     { key: 'name', label: 'Name' },
     { key: 'phone', label: 'Phone' },
-    { key: 'creditLimit', label: 'Credit Limit', render: r => `Rs. ${Number(r.creditLimit).toLocaleString()}` },
+    {
+      key: 'creditLimit', label: 'Credit Limit', render: r => (
+        <span className="mono">Rs. {Number(r.creditLimit).toLocaleString()}</span>
+      )
+    },
     {
       key: 'outstandingBalance', label: 'Outstanding', render: r => (
-        <span className={Number(r.outstandingBalance) > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+        <span className="mono" style={{ color: Number(r.outstandingBalance) > 0 ? 'var(--red-risk)' : 'var(--ink)', fontWeight: Number(r.outstandingBalance) > 0 ? 600 : 400 }}>
           Rs. {Number(r.outstandingBalance).toLocaleString()}
         </span>
       )
@@ -70,37 +80,41 @@ export default function CustomersPage() {
     {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
-          <button onClick={() => setLedgerCustomer(r)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Ledger">
+          <button onClick={() => setLedgerCustomer(r)} className="icon-btn" title="Ledger">
             <BookOpen size={14} />
           </button>
-          <button onClick={() => setEditCustomer(r)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Edit">
-            <Edit size={14} />
-          </button>
-          <button onClick={() => setDeleteCustomer(r)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
-            <Trash2 size={14} />
-          </button>
+          {canEdit && (
+            <button onClick={() => setEditCustomer(r)} className="icon-btn success" title="Edit">
+              <Edit size={14} />
+            </button>
+          )}
+          {canDeactivate && (
+            <button onClick={() => setDeleteCustomer(r)} className="icon-btn danger" title="Deactivate">
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       )
     },
   ]
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Customers</h2>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus size={16} /> Add Customer
-        </button>
+    <div className="pg">
+      <div className="pg-header">
+        <div>
+          <div className="pg-title">Customers</div>
+          <div className="pg-sub">{total} total customers</div>
+        </div>
+        {canAdd && (
+          <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
+            <Plus size={14} /> Add Customer
+          </button>
+        )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <div className="w-72">
-            <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search by name or phone..." />
-          </div>
+      <div className="card">
+        <div className="filter-bar">
+          <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search by name or phone..." />
         </div>
         <Table columns={columns} data={customers} loading={isLoading} />
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
@@ -131,9 +145,9 @@ export default function CustomersPage() {
         isOpen={!!deleteCustomer}
         onClose={() => setDeleteCustomer(null)}
         onConfirm={() => deleteCustomer && deleteMutation.mutate(deleteCustomer.id)}
-        title="Delete Customer"
-        message={`Delete "${deleteCustomer?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title="Deactivate Customer"
+        message={`Deactivate "${deleteCustomer?.name}"? They will no longer appear in POS.`}
+        confirmLabel="Deactivate"
         loading={deleteMutation.isPending}
       />
     </div>

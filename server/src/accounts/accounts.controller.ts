@@ -3,6 +3,7 @@ import { AccountsService } from './accounts.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { Role, PaymentType } from '@prisma/client'
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,8 +13,8 @@ export class AccountsController {
   constructor(private accounts: AccountsService) {}
 
   @Post('expenses')
-  createExpense(@Body() body: any) {
-    return this.accounts.createExpense(body)
+  createExpense(@Body() body: any, @CurrentUser() user: any) {
+    return this.accounts.createExpense(body, user?.id)
   }
 
   @Get('expenses')
@@ -27,8 +28,8 @@ export class AccountsController {
   }
 
   @Post('income')
-  createIncome(@Body() body: any) {
-    return this.accounts.createIncome(body)
+  createIncome(@Body() body: any, @CurrentUser() user: any) {
+    return this.accounts.createIncome(body, user?.id)
   }
 
   @Get('income')
@@ -42,8 +43,8 @@ export class AccountsController {
   }
 
   @Post('payments')
-  createPayment(@Body() body: any) {
-    return this.accounts.createPayment(body)
+  createPayment(@Body() body: any, @CurrentUser() user: any) {
+    return this.accounts.createPayment({ ...body, userId: user?.id })
   }
 
   @Get('payments')

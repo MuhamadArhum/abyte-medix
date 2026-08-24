@@ -13,22 +13,23 @@
 
 /* ── Design tokens ─────────────────────────────── */
 :root {
-  --blueprint:         #0E2A47;
-  --blueprint-deep:    #081B30;
-  --blueprint-light:   #1F4A73;
-  --line-cyan:         #9AC6E8;
-  --line-cyan-dim:     rgba(154,198,232,0.25);
-  --paper:             #ECE8DB;
-  --paper-light:       #F5F2E8;
-  --ink:               #14181B;
-  --ink-soft:          #3B4147;
-  --steel:             #6B7178;
-  --orange:            #E85D1F;
-  --orange-deep:       #C24A16;
+  /* Steel & Amber palette — ConstructPro theme */
+  --blueprint:         #2B2F33;
+  --blueprint-deep:    #1B1E21;
+  --blueprint-light:   #3F454B;
+  --line-cyan:         #C9CDD1;
+  --line-cyan-dim:     rgba(201,205,209,0.25);
+  --paper:             #EDEAE2;
+  --paper-light:       #F6F4EE;
+  --ink:               #17181A;
+  --ink-soft:          #3A3D40;
+  --steel:             #75797D;
+  --orange:            #D9A441;
+  --orange-deep:       #B8842A;
   --green-ok:          #3E8E5A;
   --amber-warn:        #C98A1E;
   --red-risk:          #C23B2E;
-  --rule:              #D3CDBA;
+  --rule:              #D9D4C6;
   --sidebar-w:         220px;
   --radius:            4px;
 
@@ -41,8 +42,8 @@
   --color-border:      var(--rule);
   --color-border-alt:  var(--rule);
   --color-input:       var(--paper-light);
-  --color-active-bg:   rgba(232,93,31,0.10);
-  --color-hover-bg:    rgba(154,198,232,0.07);
+  --color-active-bg:   rgba(217,164,65,0.12);
+  --color-hover-bg:    rgba(201,205,209,0.08);
   --color-row-border:  var(--rule);
   --color-ok-bg:       rgba(62,142,90,0.12);
   --color-ok-text:     var(--green-ok);
@@ -135,14 +136,14 @@ h1, h2, h3 { font-family: var(--font-oswald); text-transform: uppercase; letter-
   text-transform: uppercase; letter-spacing: 0.06em;
 }
 .field-input {
-  width: 100%; background: #fff; border: 1px solid var(--rule);
+  width: 100%; background: var(--paper-light); border: 1px solid var(--rule);
   border-radius: var(--radius); padding: 8px 11px; font-size: 13px;
   color: var(--ink); outline: none; font-family: var(--font-sans);
   transition: border-color 0.15s;
 }
 .field-input:focus { border-color: var(--orange); }
 .field-select {
-  width: 100%; background: #fff; border: 1px solid var(--rule);
+  width: 100%; background: var(--paper-light); border: 1px solid var(--rule);
   border-radius: var(--radius); padding: 8px 11px; font-size: 13px;
   color: var(--ink); outline: none; font-family: var(--font-sans); cursor: pointer;
 }
@@ -163,7 +164,7 @@ h1, h2, h3 { font-family: var(--font-oswald); text-transform: uppercase; letter-
   border-bottom: 1px solid var(--rule); vertical-align: middle;
 }
 .tbl tr:last-child td { border-bottom: none; }
-.tbl tbody tr:hover { background: rgba(154,198,232,0.06); }
+.tbl tbody tr:hover { background: rgba(201,205,209,0.08); }
 
 /* ── Badge ─────────────────────────────── */
 .badge {
@@ -174,8 +175,8 @@ h1, h2, h3 { font-family: var(--font-oswald); text-transform: uppercase; letter-
 .badge-ok     { background: var(--color-ok-bg);     color: var(--green-ok); }
 .badge-warn   { background: var(--color-warn-bg);   color: var(--amber-warn); }
 .badge-danger { background: var(--color-danger-bg); color: var(--red-risk); }
-.badge-neutral { background: rgba(107,113,120,0.10); color: var(--steel); }
-.badge-blue   { background: rgba(14,42,71,0.10);    color: var(--blueprint); }
+.badge-neutral { background: rgba(117,121,125,0.10); color: var(--steel); }
+.badge-blue   { background: rgba(43,47,51,0.10);    color: var(--blueprint); }
 
 /* ── Tab bar ─────────────────────────────── */
 .tab-bar {
@@ -191,7 +192,7 @@ h1, h2, h3 { font-family: var(--font-oswald); text-transform: uppercase; letter-
 }
 .tab-btn.active {
   background: var(--paper-light); color: var(--blueprint); font-weight: 600;
-  box-shadow: 0 1px 4px rgba(14,42,71,0.10);
+  box-shadow: 0 1px 4px rgba(43,47,51,0.10);
 }
 
 /* ── Row item ─────────────────────────────── */

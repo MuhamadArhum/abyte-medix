@@ -20,7 +20,7 @@ export default function Pagination({ page, total, limit, onChange, onLimitChange
   const to = Math.min(page * limit, total)
 
   const btnBase: React.CSSProperties = {
-    border: '1px solid var(--rule)', borderRadius: 'var(--radius)', background: '#fff',
+    border: '1px solid var(--rule)', borderRadius: 'var(--radius)', background: 'var(--paper-light)',
     cursor: 'pointer', color: 'var(--steel)', fontFamily: 'var(--font-mono)', fontSize: 12,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   }
@@ -61,7 +61,7 @@ export default function Pagination({ page, total, limit, onChange, onLimitChange
               onChange={e => handleLimitChange(e.target.value)}
               style={{
                 border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '3px 7px',
-                fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--ink)', background: '#fff', cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--ink)', background: 'var(--paper-light)', cursor: 'pointer',
                 outline: 'none',
               }}
             >
@@ -128,7 +128,7 @@ export default function Pagination({ page, total, limit, onChange, onLimitChange
             return (
               <button key={p} onClick={() => onChange(p)} style={{
                 ...btnBase, width: 28, height: 28,
-                background: p === page ? 'var(--blueprint)' : '#fff',
+                background: p === page ? 'var(--blueprint)' : 'var(--paper-light)',
                 color: p === page ? '#fff' : 'var(--steel)',
                 borderColor: p === page ? 'var(--blueprint)' : 'var(--rule)',
                 fontWeight: p === page ? 700 : 400,

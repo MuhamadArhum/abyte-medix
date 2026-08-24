@@ -96,6 +96,13 @@ export class SuppliersService {
     })
 
     const supplier = await this.prisma.supplier.findUnique({ where: { id } })
-    return { supplier, ledger, closingBalance: balance }
+    // Sync stored balance with ledger calculation to prevent drift
+    if (Math.abs(Number(supplier!.payableBalance) - balance) > 0.001) {
+      await this.prisma.supplier.update({
+        where: { id },
+        data: { payableBalance: balance },
+      })
+    }
+    return { supplier: { ...supplier!, payableBalance: balance }, ledger, closingBalance: balance }
   }
 }
