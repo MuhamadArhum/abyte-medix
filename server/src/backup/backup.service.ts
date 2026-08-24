@@ -1,18 +1,26 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import * as path from 'path'
 import * as fs from 'fs'
+
+const execAsync = promisify(exec)
+
+// Common mysqldump locations on Windows
+const MYSQLDUMP_PATHS = [
+  'mysqldump',
+  'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MySQL\\MySQL Server 5.7\\bin\\mysqldump.exe',
+  'C:\\xampp\\mysql\\bin\\mysqldump.exe',
+  'C:\\wamp64\\bin\\mysql\\mysql8.0\\bin\\mysqldump.exe',
+  'C:\\laragon\\bin\\mysql\\mysql-8.0\\bin\\mysqldump.exe',
+]
 
 @Injectable()
 export class BackupService {
   constructor(private prisma: PrismaService) {}
-
-  private getDbFilePath(): string {
-    const dbUrl = process.env.DATABASE_URL ?? 'file:./prisma/dev.db'
-    // Parse SQLite file path from "file:./path/to/db.db" or "file:../path/db.db"
-    const filePath = dbUrl.replace(/^file:/, '')
-    return path.resolve(process.cwd(), filePath)
-  }
 
   private getBackupDir(): string {
     const dir = path.resolve(process.cwd(), 'backups')
@@ -20,15 +28,44 @@ export class BackupService {
     return dir
   }
 
-  async createBackup() {
-    const dbFile = this.getDbFilePath()
-    if (!fs.existsSync(dbFile)) {
-      throw new BadRequestException(`Database file not found: ${dbFile}`)
+  private parseDbUrl(): { user: string; pass: string; host: string; port: string; name: string } {
+    const dbUrl = process.env.DATABASE_URL ?? ''
+    try {
+      const url = new URL(dbUrl)
+      return {
+        user: url.username || 'root',
+        pass: url.password || '',
+        host: url.hostname || 'localhost',
+        port: url.port || '3306',
+        name: url.pathname.replace(/^\//, ''),
+      }
+    } catch {
+      return { user: 'root', pass: '', host: 'localhost', port: '3306', name: '' }
     }
+  }
+
+  private async findMysqldump(): Promise<string> {
+    for (const candidate of MYSQLDUMP_PATHS) {
+      try {
+        await execAsync(`"${candidate}" --version`)
+        return candidate
+      } catch {
+        // not found at this path, try next
+      }
+    }
+    throw new BadRequestException(
+      'mysqldump not found. Install MySQL client tools and ensure mysqldump is in your PATH, ' +
+      'or install MySQL Server (includes mysqldump at C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\).'
+    )
+  }
+
+  async createBackup() {
+    const { user, pass, host, port, name } = this.parseDbUrl()
+    if (!name) throw new BadRequestException('Could not determine database name from DATABASE_URL')
 
     const backupDir = this.getBackupDir()
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const filename = `backup-${timestamp}.db`
+    const filename = `backup-${timestamp}.sql`
     const filePath = path.join(backupDir, filename)
 
     const record = await this.prisma.backup.create({
@@ -36,9 +73,14 @@ export class BackupService {
     })
 
     try {
-      fs.copyFileSync(dbFile, filePath)
-      const size = fs.statSync(filePath).size
+      const mysqldump = await this.findMysqldump()
+      const passFlag = pass ? `--password="${pass}"` : ''
+      const cmd = `"${mysqldump}" -u"${user}" ${passFlag} -h"${host}" -P${port} --single-transaction --routines "${name}"`
 
+      const { stdout } = await execAsync(cmd, { maxBuffer: 100 * 1024 * 1024 })
+      fs.writeFileSync(filePath, stdout, 'utf8')
+
+      const size = fs.statSync(filePath).size
       await this.prisma.backup.update({
         where: { id: record.id },
         data: { status: 'SUCCESS', size: BigInt(size) },
@@ -49,17 +91,15 @@ export class BackupService {
       await this.prisma.backup.update({
         where: { id: record.id },
         data: { status: 'FAILED' },
-      })
-      throw new BadRequestException(`Backup failed: ${err.message}`)
+      }).catch(() => {})
+      throw new BadRequestException(err.message ?? 'Backup failed')
     }
   }
 
   async findAll(page = 1, limit = 20) {
     const skip = (page - 1) * limit
     const [data, total] = await this.prisma.$transaction([
-      this.prisma.backup.findMany({
-        skip, take: limit, orderBy: { createdAt: 'desc' },
-      }),
+      this.prisma.backup.findMany({ skip, take: limit, orderBy: { createdAt: 'desc' } }),
       this.prisma.backup.count(),
     ])
     return { data, total }
@@ -75,20 +115,23 @@ export class BackupService {
       throw new BadRequestException(`Backup file not found on disk: ${backup.filename}`)
     }
 
-    const dbFile = this.getDbFilePath()
+    const { user, pass, host, port, name } = this.parseDbUrl()
+    if (!name) throw new BadRequestException('Could not determine database name from DATABASE_URL')
 
     try {
-      // Copy backup over the current database file
-      fs.copyFileSync(backup.location, dbFile)
+      const mysqlBin = (await this.findMysqldump()).replace('mysqldump', 'mysql')
+      const passFlag = pass ? `--password="${pass}"` : ''
+      const content = fs.readFileSync(backup.location, 'utf8')
+      const cmd = `"${mysqlBin}" -u"${user}" ${passFlag} -h"${host}" -P${port} "${name}"`
+      const child = await execAsync(cmd, { input: content } as any)
       return {
         success: true,
         message: `Database restored from ${backup.filename}`,
         backupId: id,
-        filename: backup.filename,
         restoredAt: new Date().toISOString(),
       }
     } catch (err: any) {
-      throw new BadRequestException(`Restore failed: ${err.message}`)
+      throw new BadRequestException(`Restore failed: ${err.message ?? err.stderr}`)
     }
   }
 }

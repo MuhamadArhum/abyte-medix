@@ -41,13 +41,13 @@ export default function BackupPage() {
       toast.success(`Backup created: ${data.filename ?? 'success'}`)
       qc.invalidateQueries({ queryKey: ['backups'] })
     },
-    onError: () => toast.error('Backup failed'),
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Backup failed'),
   })
 
   const restoreMutation = useMutation({
     mutationFn: (id: number) => api.post(`/backup/${id}/restore`).then(r => r.data),
     onSuccess: () => toast.success('Restore initiated. Application may restart.'),
-    onError: () => toast.error('Restore failed'),
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Restore failed'),
   })
 
   const backupList: Backup[] = backups?.data ?? backups ?? []
