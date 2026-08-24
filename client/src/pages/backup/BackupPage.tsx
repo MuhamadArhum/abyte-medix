@@ -70,7 +70,7 @@ export default function BackupPage() {
               <HardDrive size={18} style={{ color: 'var(--green-ok)' }} />
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-oswald)', fontWeight: 600, fontSize: 14, color: 'var(--blueprint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Backup Status</div>
+              <div style={{ fontFamily: 'var(--font-oswald)', fontWeight: 600, fontSize: 14, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Backup Status</div>
               <div style={labelSm}>Last backup info</div>
             </div>
           </div>
@@ -132,7 +132,7 @@ export default function BackupPage() {
                   <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--steel)', fontSize: 13 }}>No backups found</td></tr>
                 ) : (
                   backupList.map((b) => (
-                    <tr key={b.id}>
+                    <tr key={b.id ?? b.filename}>
                       <td style={{ fontSize: 11, wordBreak: 'break-all', maxWidth: 240 }}>{b.filename}</td>
                       <td>{formatBytes(b.size ?? 0)}</td>
                       <td><Badge label={b.status ?? 'COMPLETE'} variant="green" /></td>

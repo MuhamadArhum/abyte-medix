@@ -35,7 +35,7 @@ export default defineConfig({
             outDir: 'dist-electron',
             sourcemap: true,
             rollupOptions: {
-              output: { format: 'cjs' },
+              output: { format: 'cjs', entryFileNames: '[name].cjs' },
             },
           },
         },
