@@ -11,9 +11,9 @@ import Spinner from '../../components/ui/Spinner'
 import PrintA4, { type SaleReceiptData } from '../../components/ui/PrintA4'
 
 const C = {
-  primary: '#E85D1F', primaryDark: '#C24A16',
-  bg: '#ECE8DB', card: '#F5F2E8', border: '#D3CDBA',
-  text: '#14181B', subtext: '#6B7178', faint: '#6B7178',
+  primary: '#D9A441', primaryDark: '#B8842A',
+  bg: '#EDEAE2', card: '#F6F4EE', border: '#D9D4C6',
+  text: '#17181A', subtext: '#75797D', faint: '#75797D',
   danger: '#C23B2E', dangerBg: 'rgba(194,59,46,0.10)',
   warn: '#C98A1E', warnBg: 'rgba(201,138,30,0.12)',
   expiry: '#C23B2E', expiryBg: 'rgba(194,59,46,0.10)',
@@ -58,7 +58,7 @@ function KbdTag({ children }: { children: React.ReactNode }) {
   return (
     <kbd style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--blueprint)', color: '#fff', borderRadius: 'var(--radius)',
+      background: 'var(--ink)', color: '#fff', borderRadius: 'var(--radius)',
       padding: '2px 7px', fontSize: 11, fontWeight: 700,
       fontFamily: 'var(--font-mono)',
       minWidth: 28, whiteSpace: 'nowrap',
@@ -71,13 +71,13 @@ function KbdTag({ children }: { children: React.ReactNode }) {
 function ShortcutsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(8,27,48,0.6)',
+      position: 'fixed', inset: 0, background: 'rgba(27,30,33,0.65)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 80, padding: 16,
     }} onClick={onClose}>
       <div style={{
         background: 'var(--paper-light)', borderRadius: 'var(--radius)', width: 640, maxHeight: '80vh',
-        overflowY: 'auto', padding: 28, boxShadow: '0 16px 48px rgba(8,27,48,0.25)',
+        overflowY: 'auto', padding: 28, boxShadow: '0 16px 48px rgba(27,30,33,0.25)',
         border: '1px solid var(--rule)',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
@@ -136,7 +136,7 @@ function ShortcutBar({ onHelp }: { onHelp: () => void }) {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 200, right: 0,
-      background: 'var(--blueprint-deep)', padding: '6px 16px',
+      background: 'var(--ink)', padding: '6px 16px',
       display: 'flex', alignItems: 'center', gap: 4, zIndex: 30, flexWrap: 'wrap',
     }}>
       {chips.map(c => (
@@ -719,7 +719,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
             <div ref={dropdownRef} style={{
               position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6,
               background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12,
-              boxShadow: '0 8px 24px rgba(11,110,92,0.12)', zIndex: 40,
+              boxShadow: '0 8px 24px rgba(27,30,33,0.12)', zIndex: 40,
               maxHeight: 360, overflowY: 'auto',
             }}>
               <div style={{
@@ -761,7 +761,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
                       width: '100%', textAlign: 'left', border: 'none',
                       cursor: isOut ? 'not-allowed' : 'pointer',
                       padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
-                      background: isHi ? '#E8F6F1' : '#fff',
+                      background: isHi ? 'rgba(217,164,65,0.10)' : '#fff',
                       borderBottom: `1px solid ${C.border}`,
                       opacity: isOut ? 0.55 : 1, transition: 'background 0.08s',
                     }}
@@ -893,7 +893,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
         {/* Item count badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
           <ShoppingCart size={15} color={C.primary} />
-          <span style={{ fontSize: 12, background: '#E8F6F1', color: C.primary, padding: '2px 10px', borderRadius: 999, fontWeight: 700 }}>
+          <span style={{ fontSize: 12, background: 'rgba(217,164,65,0.15)', color: C.primary, padding: '2px 10px', borderRadius: 999, fontWeight: 700 }}>
             {cart.reduce((s, i) => s + i.qty, 0)} items
           </span>
         </div>
@@ -1130,7 +1130,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
             disabled={saleMutation.isPending || cart.length === 0}
             style={{
               width: '100%', marginTop: 8, padding: '12px', borderRadius: 10, border: 'none',
-              background: cart.length === 0 ? '#BFDCD3' : C.primary, color: '#fff', fontWeight: 700,
+              background: cart.length === 0 ? '#C4BA9A' : C.primary, color: '#fff', fontWeight: 700,
               fontSize: 14, cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
@@ -1216,7 +1216,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
       {/* ── Receipt Modal ── */}
       {receipt && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(15,36,30,0.45)',
+          position: 'fixed', inset: 0, background: 'rgba(27,30,33,0.55)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: 16,
         }} onClick={newSale}>
           <div style={{

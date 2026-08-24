@@ -9,10 +9,10 @@ import { useAuthStore } from '../../store/auth.store'
 import { ACTION_ROLES, canRole } from '../../config/rbac'
 
 const C = {
-  primary: '#E85D1F', bg: '#ECE8DB', border: '#D3CDBA',
-  text: '#14181B', subtext: '#6B7178', faint: '#6B7178',
+  primary: '#D9A441', bg: '#EDEAE2', border: '#D9D4C6',
+  text: '#17181A', subtext: '#75797D', faint: '#75797D',
   danger: '#C23B2E', dangerBg: 'rgba(194,59,46,0.10)',
-  purple: '#0E2A47', purpleBg: 'rgba(14,42,71,0.08)',
+  purple: '#2B2F33', purpleBg: 'rgba(43,47,51,0.07)',
 }
 const MONO: React.CSSProperties = { fontFamily: 'var(--font-mono)' }
 
@@ -100,13 +100,13 @@ export default function QuotationsPage() {
     <style>
       body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 0; padding: 20mm 18mm; }
       h1 { font-size: 18px; margin: 0; } h2 { font-size: 13px; margin: 0; color: #555; }
-      .header { text-align: center; border-bottom: 2px solid #0E2A47; padding-bottom: 10px; margin-bottom: 14px; }
+      .header { text-align: center; border-bottom: 2px solid #2B2F33; padding-bottom: 10px; margin-bottom: 14px; }
       .meta { display: flex; justify-content: space-between; margin-bottom: 14px; font-size: 11px; }
       table { width: 100%; border-collapse: collapse; font-size: 11px; }
-      th { background: #0E2A47; color: #fff; padding: 6px 8px; text-align: left; }
+      th { background: #2B2F33; color: #fff; padding: 6px 8px; text-align: left; }
       td { padding: 6px 8px; border-bottom: 1px solid #eee; }
       .totals { margin-top: 12px; text-align: right; font-size: 12px; }
-      .total-row { font-size: 15px; font-weight: bold; color: #E85D1F; margin-top: 6px; }
+      .total-row { font-size: 15px; font-weight: bold; color: #D9A441; margin-top: 6px; }
       .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 11px; color: #888; }
       @media print { body { padding: 10mm; } }
     </style></head><body>
