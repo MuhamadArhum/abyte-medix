@@ -4,7 +4,7 @@ import { api } from '../../api/client'
 import {
   LayoutDashboard, ShoppingCart, Pill, PackageOpen, Boxes,
   Users, Truck, BarChart3, Wallet, UserCog, Settings,
-  ClipboardList, HardDrive, ShieldCheck, LogOut, FileText,
+  ClipboardList, HardDrive, ShieldCheck, LogOut, FileText, Receipt,
 } from 'lucide-react'
 
 interface NavItem { to: string; label: string; icon: React.ReactNode; roles: string[] }
@@ -12,6 +12,7 @@ interface NavItem { to: string; label: string; icon: React.ReactNode; roles: str
 const NAV_ITEMS: NavItem[] = [
   { to: '/',          label: 'Dashboard',  icon: <LayoutDashboard size={14} />, roles: ['ADMIN','MANAGER'] },
   { to: '/pos',        label: 'Sales / POS',  icon: <ShoppingCart size={14} />, roles: ['ADMIN','MANAGER','CASHIER'] },
+  { to: '/sales',      label: 'Sales History', icon: <Receipt size={14} />,      roles: ['ADMIN','MANAGER','CASHIER'] },
   { to: '/quotations', label: 'Quotations',  icon: <FileText size={14} />,     roles: ['ADMIN','MANAGER','CASHIER'] },
   { to: '/medicines', label: 'Medicines',  icon: <Pill size={14} />,            roles: ['ADMIN','MANAGER','INVENTORY_STAFF'] },
   { to: '/purchases', label: 'Purchases',  icon: <PackageOpen size={14} />,     roles: ['ADMIN','MANAGER','INVENTORY_STAFF'] },

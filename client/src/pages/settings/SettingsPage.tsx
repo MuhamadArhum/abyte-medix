@@ -36,16 +36,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (data && !loaded) {
-      const s: Settings = {}
-      const entries = Array.isArray(data)
-        ? data
-        : Object.entries(data).map(([key, value]) => ({ key, value }))
-
-      entries.forEach((e: any) => {
-        const k = e.key as keyof Settings
-        ;(s as any)[k] = e.value
-      })
-      setForm(s)
+      setForm(data as Settings)
       setLoaded(true)
     }
   }, [data, loaded])
@@ -60,7 +51,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     const payload: Record<string, unknown> = {}
-    Object.entries(form).forEach(([k, v]) => { if (v !== undefined && v !== '') payload[k] = v })
+    Object.entries(form).forEach(([k, v]) => { if (v !== undefined) payload[k] = v })
     mutation.mutate(payload)
   }
 

@@ -4,24 +4,39 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { api } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
 
-type Tab = 'sales' | 'purchases' | 'inventory'
+type Tab = 'sales' | 'purchases' | 'inventory' | 'pl'
 type GroupBy = 'day' | 'month'
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="bg-white rounded-xl p-4 text-center" style={{ border: '1px solid var(--rule)' }}>
-      <p className="text-xs uppercase" style={{ color: 'var(--steel)', letterSpacing: '0.04em', fontWeight: 600 }}>{label}</p>
-      <p className="text-xl font-bold mt-1 mono" style={{ color: 'var(--ink)' }}>{value}</p>
+    <div style={{
+      background: 'var(--paper-light)', border: '1px solid var(--rule)',
+      borderRadius: 'var(--radius)', padding: '14px 16px', textAlign: 'center',
+      minWidth: 0, /* prevent overflow in grid */
+    }}>
+      <div style={{ fontSize: 11, color: 'var(--steel)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 5 }}>{label}</div>
+      <div style={{
+        fontSize: 17, fontWeight: 800, fontFamily: 'var(--font-mono)',
+        color: color ?? 'var(--ink)',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--steel)', marginTop: 3 }}>{sub}</div>}
     </div>
   )
 }
 
+// Compact Y-axis formatter: 1500000 → 1.5M, 25000 → 25K
+const yFmt = (v: number) =>
+  v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M`
+  : v >= 1_000   ? `${(v / 1_000).toFixed(0)}K`
+  : String(v)
+
 export default function ReportsPage() {
   const today = new Date().toISOString().split('T')[0]
-  const monthStart = today.slice(0, 8) + '01'
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
   const [tab, setTab] = useState<Tab>('sales')
-  const [from, setFrom] = useState(monthStart)
+  const [from, setFrom] = useState(firstOfMonth)
   const [to, setTo] = useState(today)
   const [groupBy, setGroupBy] = useState<GroupBy>('day')
 
@@ -61,248 +76,345 @@ export default function ReportsPage() {
     enabled: tab === 'inventory',
   })
 
-  const chartData = (tab === 'sales' ? salesData : purchasesData) ?? []
-  const chartLoading = tab === 'sales' ? salesLoading : purLoading
+  const { data: plData, isLoading: plLoading } = useQuery({
+    queryKey: ['report-pl', from, to],
+    queryFn: () => api.get(`/reports/profit-loss?from=${from}&to=${to}`).then(r => r.data),
+    enabled: tab === 'pl',
+  })
 
-  const totalSales = (salesData ?? []).reduce((s: number, d: any) => s + Number(d.total ?? d.amount ?? 0), 0)
-  const totalPurchases = (purchasesData ?? []).reduce((s: number, d: any) => s + Number(d.total ?? d.amount ?? 0), 0)
+  const salesRows: any[] = salesData ?? []
+  const purchaseRows: any[] = purchasesData ?? []
+  const totalSales = salesRows.reduce((s, d) => s + Number(d.total ?? 0), 0)
+  const totalTransactions = salesRows.reduce((s, d) => s + Number(d.count ?? 0), 0)
+  const totalPurchases = purchaseRows.reduce((s, d) => s + Number(d.total ?? 0), 0)
+  const totalPurchaseOrders = purchaseRows.reduce((s, d) => s + Number(d.count ?? 0), 0)
 
-  const valuationItems = valuation?.data ?? valuation ?? []
-  const totalCostVal = valuationItems.reduce((s: number, v: any) => s + Number(v.costValue ?? 0), 0)
-  const totalSaleVal = valuationItems.reduce((s: number, v: any) => s + Number(v.saleValue ?? 0), 0)
+  const valuationItems: any[] = valuation ?? []
+  const totalCostVal = valuationItems.reduce((s, v) => s + Number(v.costValue ?? 0), 0)
+  const totalSaleVal = valuationItems.reduce((s, v) => s + Number(v.saleValue ?? 0), 0)
+
+  // Adaptive summary grid — wraps to 2 or 1 col at narrow widths
+  const summaryGrid: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+    gap: 12,
+  }
+
+  const dateFilterBar = (
+    <div className="filter-bar" style={{ border: 'none', padding: '0 0 14px 0', flexWrap: 'wrap', gap: 8 }}>
+      <span style={{ fontSize: 12.5, color: 'var(--steel)' }}>From:</span>
+      <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="filter-select" />
+      <span style={{ fontSize: 12.5, color: 'var(--steel)' }}>To:</span>
+      <input type="date" value={to} onChange={e => setTo(e.target.value)} className="filter-select" />
+      {(tab === 'sales' || tab === 'purchases') && (
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['day', 'month'] as GroupBy[]).map(g => (
+            <button key={g} onClick={() => setGroupBy(g)} style={{
+              padding: '4px 12px', borderRadius: 'var(--radius)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              border: groupBy === g ? 'none' : '1px solid var(--rule)',
+              background: groupBy === g ? 'var(--orange)' : 'var(--paper-light)',
+              color: groupBy === g ? '#fff' : 'var(--steel)',
+            }}>
+              {g === 'day' ? 'Daily' : 'Monthly'}
+            </button>
+          ))}
+        </div>
+      )}
+      <button onClick={() => { setFrom(firstOfMonth); setTo(today) }}
+        style={{ fontSize: 12, color: 'var(--steel)', background: 'none', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '4px 10px', cursor: 'pointer' }}>
+        This Month
+      </button>
+      <button onClick={() => { setFrom(today); setTo(today) }}
+        style={{ fontSize: 12, color: 'var(--steel)', background: 'none', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '4px 10px', cursor: 'pointer' }}>
+        Today
+      </button>
+    </div>
+  )
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ marginBottom: 18 }}>
         <div className="pg-title">Reports</div>
         <div className="pg-sub">Sales, purchases and inventory analytics</div>
       </div>
 
-      <div className="tab-bar" style={{ marginBottom: 16 }}>
-        {(['sales', 'purchases', 'inventory'] as Tab[]).map(t => (
-          <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)} style={{ textTransform: 'capitalize' }}>{t}</button>
+      {/* Tab bar — wraps on narrow windows */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, background: 'var(--paper)', borderRadius: 'var(--radius)', padding: 3, border: '1px solid var(--rule)', width: 'fit-content', maxWidth: '100%', marginBottom: 16 }}>
+        {(['sales', 'purchases', 'inventory', 'pl'] as Tab[]).map(t => (
+          <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+            {t === 'pl' ? 'Profit & Loss' : t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
         ))}
       </div>
 
-      {tab !== 'inventory' && (
-        <div className="filter-bar" style={{ border: 'none', padding: '0 0 14px 0' }}>
-          <span style={{ fontSize: 12.5, color: 'var(--steel)' }}>From:</span>
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="filter-date" />
-          <span style={{ fontSize: 12.5, color: 'var(--steel)' }}>To:</span>
-          <input type="date" value={to} onChange={e => setTo(e.target.value)} className="filter-date" />
-          <div className="tab-bar">
-            {(['day', 'month'] as GroupBy[]).map(g => (
-              <button
-                key={g}
-                onClick={() => setGroupBy(g)}
-                className={`tab-btn ${groupBy === g ? 'active' : ''}`}
-              >
-                {g === 'day' ? 'Daily' : 'Monthly'}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sales Tab */}
+      {/* ── Sales Tab ── */}
       {tab === 'sales' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <SummaryCard label="Total Sales" value={`Rs. ${totalSales.toLocaleString()}`} />
-            <SummaryCard label="Transactions" value={String(salesData?.length ?? 0)} />
-            <SummaryCard label="Avg per Day" value={`Rs. ${salesData?.length ? (totalSales / salesData.length).toFixed(0) : 0}`} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {dateFilterBar}
+
+          <div style={summaryGrid}>
+            <SummaryCard label="Total Revenue" value={`Rs. ${totalSales.toLocaleString()}`} />
+            <SummaryCard label="Transactions" value={String(totalTransactions)} />
+            <SummaryCard
+              label={groupBy === 'day' ? 'Avg / Day' : 'Avg / Month'}
+              value={`Rs. ${salesRows.length ? Math.round(totalSales / salesRows.length).toLocaleString() : 0}`}
+            />
           </div>
 
-          {/* Chart */}
           <div className="card card-p">
             <h3 className="card-title">Sales Trend</h3>
-            {chartLoading ? (
-              <div className="flex justify-center py-8"><Spinner /></div>
+            {salesLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
+            ) : salesRows.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--steel)' }}>No sales data for selected period</div>
             ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey={groupBy === 'day' ? 'date' : 'month'} tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={salesRows} margin={{ left: 10, right: 10, top: 4, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
+                  <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={yFmt} width={50} />
                   <Tooltip formatter={(v) => [`Rs. ${Number(v).toLocaleString()}`, 'Sales']} />
-                  <Bar dataKey="total" fill="var(--orange)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="var(--orange)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
 
-          {/* By Product */}
           <div className="card">
-            <div className="px-5 py-4 card-divider" style={{ borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Top Selling Products</h3>
             </div>
             {productLoading ? (
-              <div className="flex justify-center py-8"><Spinner /></div>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
             ) : (
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    {['#', 'Medicine', 'Qty Sold', 'Revenue'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(salesByProduct ?? []).slice(0, 15).map((p: any, i: number) => (
-                    <tr key={i}>
-                      <td style={{ color: 'var(--steel)' }}>{i + 1}</td>
-                      <td className="font-medium">{p.medicineName ?? p.medicine?.brandName ?? p.name}</td>
-                      <td className="">{p.totalQty ?? p.quantity ?? 0}</td>
-                      <td className="font-semibold">Rs. {Number(p.totalRevenue ?? p.total ?? 0).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {!productLoading && (salesByProduct ?? []).length === 0 && (
-                    <tr><td colSpan={4} className="text-center py-6" style={{ color: 'var(--steel)' }}>No data</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="tbl" style={{ minWidth: 400 }}>
+                  <thead>
+                    <tr>{['#', 'Medicine', 'Qty Sold', 'Revenue'].map(h => <th key={h}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {(salesByProduct ?? []).length === 0 ? (
+                      <tr><td colSpan={4} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--steel)' }}>No data for selected period</td></tr>
+                    ) : (
+                      (salesByProduct ?? []).slice(0, 15).map((p: any, i: number) => (
+                        <tr key={i}>
+                          <td style={{ color: 'var(--steel)', width: 36 }}>{i + 1}</td>
+                          <td style={{ fontWeight: 600 }}>{p.brandName}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{p.totalQty}</td>
+                          <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>Rs. {Number(p.totalRevenue).toLocaleString()}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
-          {/* By Customer */}
           <div className="card">
-            <div className="px-5 py-4 card-divider" style={{ borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Sales by Customer</h3>
             </div>
             {custLoading ? (
-              <div className="flex justify-center py-8"><Spinner /></div>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
             ) : (
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    {['Customer', 'Transactions', 'Total Amount'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(salesByCustomer ?? []).slice(0, 15).map((c: any, i: number) => (
-                    <tr key={i}>
-                      <td className="font-medium">{c.customerName ?? c.customer?.name ?? 'Walk-in'}</td>
-                      <td className="">{c.count ?? c.transactions ?? 0}</td>
-                      <td className="font-semibold">Rs. {Number(c.totalAmount ?? c.total ?? 0).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {!custLoading && (salesByCustomer ?? []).length === 0 && (
-                    <tr><td colSpan={3} className="text-center py-6" style={{ color: 'var(--steel)' }}>No data</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="tbl" style={{ minWidth: 360 }}>
+                  <thead>
+                    <tr>{['Customer', 'Transactions', 'Total Amount'].map(h => <th key={h}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {(salesByCustomer ?? []).length === 0 ? (
+                      <tr><td colSpan={3} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--steel)' }}>No data for selected period</td></tr>
+                    ) : (
+                      (salesByCustomer ?? []).slice(0, 15).map((c: any, i: number) => (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600 }}>{c.name}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{c.count}</td>
+                          <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>Rs. {Number(c.totalSales).toLocaleString()}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Purchases Tab */}
+      {/* ── Purchases Tab ── */}
       {tab === 'purchases' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {dateFilterBar}
+
+          <div style={summaryGrid}>
             <SummaryCard label="Total Purchases" value={`Rs. ${totalPurchases.toLocaleString()}`} />
-            <SummaryCard label="Purchase Orders" value={String(purchasesData?.length ?? 0)} />
+            <SummaryCard label="Purchase Orders" value={String(totalPurchaseOrders)} />
+            <SummaryCard
+              label={groupBy === 'day' ? 'Avg / Day' : 'Avg / Month'}
+              value={`Rs. ${purchaseRows.length ? Math.round(totalPurchases / purchaseRows.length).toLocaleString() : 0}`}
+            />
           </div>
 
           <div className="card card-p">
             <h3 className="card-title">Purchases Trend</h3>
             {purLoading ? (
-              <div className="flex justify-center py-8"><Spinner /></div>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
+            ) : purchaseRows.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--steel)' }}>No purchase data for selected period</div>
             ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey={groupBy === 'day' ? 'date' : 'month'} tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={purchaseRows} margin={{ left: 10, right: 10, top: 4, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
+                  <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={yFmt} width={50} />
                   <Tooltip formatter={(v) => [`Rs. ${Number(v).toLocaleString()}`, 'Purchases']} />
-                  <Bar dataKey="total" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="#7c3aed" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
 
           <div className="card">
-            <div className="px-5 py-4 card-divider" style={{ borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Purchases by Supplier</h3>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  {['Supplier', 'Orders', 'Total Amount'].map(h => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(purchasesBySupplier ?? []).map((s: any, i: number) => (
-                  <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="font-medium">{s.supplierName ?? s.supplier?.name}</td>
-                    <td className="">{s.count ?? s.orders ?? 0}</td>
-                    <td className="font-semibold">Rs. {Number(s.totalAmount ?? s.total ?? 0).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {(purchasesBySupplier ?? []).length === 0 && (
-                  <tr><td colSpan={3} className="text-center py-6" style={{ color: 'var(--steel)' }}>No data</td></tr>
-                )}
-              </tbody>
-            </table>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="tbl" style={{ minWidth: 360 }}>
+                <thead>
+                  <tr>{['Supplier', 'Orders', 'Total Amount'].map(h => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {(purchasesBySupplier ?? []).length === 0 ? (
+                    <tr><td colSpan={3} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--steel)' }}>No data for selected period</td></tr>
+                  ) : (
+                    (purchasesBySupplier ?? []).map((s: any, i: number) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 600 }}>{s.name}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{s.count}</td>
+                        <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>Rs. {Number(s.totalPurchases).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Inventory Tab */}
+      {/* ── Profit & Loss Tab ── */}
+      {tab === 'pl' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {dateFilterBar}
+
+          {plLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
+          ) : plData ? (
+            <>
+              <div style={summaryGrid}>
+                <SummaryCard label="Revenue" value={`Rs. ${Number(plData.revenue).toLocaleString()}`} />
+                <SummaryCard label="Gross Profit" value={`Rs. ${Number(plData.grossProfit).toLocaleString()}`}
+                  color={plData.grossProfit >= 0 ? 'var(--green-ok)' : 'var(--red-risk)'} />
+                <SummaryCard label="Net Profit" value={`Rs. ${Number(plData.netProfit).toLocaleString()}`}
+                  color={plData.netProfit >= 0 ? 'var(--green-ok)' : 'var(--red-risk)'}
+                  sub={`Margin: ${Number(plData.grossMargin).toFixed(1)}%`} />
+              </div>
+
+              <div className="card card-p">
+                <h3 className="card-title" style={{ marginBottom: 16 }}>P&L Statement</h3>
+                <div style={{ maxWidth: 'min(600px, 100%)' }}>
+                  {[
+                    { label: 'Revenue (Sales)', value: plData.revenue, color: 'var(--ink)' },
+                    { label: '− Cost of Goods Sold (COGS)', value: plData.cogs, color: 'var(--red-risk)', sub: true },
+                    { label: 'Gross Profit', value: plData.grossProfit, color: plData.grossProfit >= 0 ? 'var(--green-ok)' : 'var(--red-risk)', bold: true, border: true },
+                    { label: 'Gross Margin', value: `${Number(plData.grossMargin).toFixed(1)}%`, isString: true, color: 'var(--steel)', sub: true },
+                    { label: '− Operating Expenses', value: plData.expenses, color: 'var(--red-risk)', sub: true },
+                    { label: '+ Other Income', value: plData.otherIncome, color: 'var(--green-ok)', sub: true },
+                    { label: 'Net Profit', value: plData.netProfit, color: plData.netProfit >= 0 ? 'var(--green-ok)' : 'var(--red-risk)', bold: true, border: true },
+                  ].map((row: any, i) => (
+                    <div key={i} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '9px 0', gap: 12,
+                      borderTop: row.border ? '2px solid var(--rule)' : i > 0 ? '1px solid var(--rule)' : 'none',
+                    }}>
+                      <span style={{ fontSize: 13, color: row.sub ? 'var(--steel)' : 'var(--ink)', fontWeight: row.bold ? 700 : 400, flexShrink: 0 }}>
+                        {row.label}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: row.bold ? 800 : 600, color: row.color, fontFamily: 'var(--font-mono)', textAlign: 'right' }}>
+                        {row.isString ? row.value : `Rs. ${Number(row.value).toLocaleString()}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 14, fontSize: 12, color: 'var(--steel)', borderTop: '1px solid var(--rule)', paddingTop: 10 }}>
+                  Based on <strong>{plData.salesCount}</strong> completed sale(s) · {plData.period.from} → {plData.period.to}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: 'var(--steel)', textAlign: 'center', padding: 32 }}>No data for selected period.</div>
+          )}
+        </div>
+      )}
+
+      {/* ── Inventory Tab ── */}
       {tab === 'inventory' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={summaryGrid}>
             <SummaryCard label="Total SKUs" value={String(valuationItems.length)} />
             <SummaryCard label="Cost Value" value={`Rs. ${totalCostVal.toLocaleString()}`} />
-            <SummaryCard label="Sale Value" value={`Rs. ${totalSaleVal.toLocaleString()}`} />
+            <SummaryCard label="Sale Value" value={`Rs. ${totalSaleVal.toLocaleString()}`} color="var(--green-ok)"
+              sub={totalCostVal > 0 ? `Margin: ${(((totalSaleVal - totalCostVal) / totalCostVal) * 100).toFixed(1)}%` : undefined}
+            />
           </div>
 
           <div className="card">
-            <div className="px-5 py-4 card-divider" style={{ borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Stock Valuation</h3>
             </div>
             {valLoading ? (
-              <div className="flex justify-center py-8"><Spinner /></div>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
             ) : (
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    {['Medicine', 'Total Qty', 'Cost Value', 'Sale Value', 'Margin'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {valuationItems.map((v: any, i: number) => {
-                    const margin = v.costValue > 0
-                      ? (((v.saleValue - v.costValue) / v.costValue) * 100).toFixed(1)
-                      : '0.0'
-                    return (
-                      <tr key={i}>
-                        <td className="font-medium">{v.medicineName ?? v.medicine?.brandName}</td>
-                        <td className="">{v.totalQty ?? 0}</td>
-                        <td className="">Rs. {Number(v.costValue ?? 0).toLocaleString()}</td>
-                        <td className="">Rs. {Number(v.saleValue ?? 0).toLocaleString()}</td>
-                        <td className="font-medium" style={{ color: '#2F8F5F' }}>{margin}%</td>
-                      </tr>
-                    )
-                  })}
-                  {/* Total row */}
-                  <tr className="font-bold" style={{ borderTop: '2px solid var(--rule)', background: 'var(--paper)' }}>
-                    <td className="font-bold">TOTAL</td>
-                    <td className="font-bold">—</td>
-                    <td className="font-bold">Rs. {totalCostVal.toLocaleString()}</td>
-                    <td className="font-bold">Rs. {totalSaleVal.toLocaleString()}</td>
-                    <td className="font-bold" style={{ color: '#2F8F5F' }}>
-                      {totalCostVal > 0 ? (((totalSaleVal - totalCostVal) / totalCostVal) * 100).toFixed(1) : 0}%
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="tbl" style={{ minWidth: 520 }}>
+                  <thead>
+                    <tr>{['Medicine', 'Qty', 'Cost Value', 'Sale Value', 'Margin %'].map(h => <th key={h}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {valuationItems.length === 0 ? (
+                      <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--steel)' }}>No inventory data</td></tr>
+                    ) : (
+                      <>
+                        {valuationItems.map((v: any, i: number) => {
+                          const margin = v.costValue > 0
+                            ? (((v.saleValue - v.costValue) / v.costValue) * 100).toFixed(1)
+                            : '0.0'
+                          return (
+                            <tr key={i}>
+                              <td style={{ fontWeight: 600 }}>{v.brandName}</td>
+                              <td style={{ fontFamily: 'var(--font-mono)' }}>{v.totalQty}</td>
+                              <td style={{ fontFamily: 'var(--font-mono)' }}>Rs. {Number(v.costValue).toLocaleString()}</td>
+                              <td style={{ fontFamily: 'var(--font-mono)' }}>Rs. {Number(v.saleValue).toLocaleString()}</td>
+                              <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-ok)', fontWeight: 600 }}>{margin}%</td>
+                            </tr>
+                          )
+                        })}
+                        <tr style={{ borderTop: '2px solid var(--rule)', background: 'var(--paper)' }}>
+                          <td style={{ fontWeight: 700 }}>TOTAL</td>
+                          <td style={{ color: 'var(--steel)' }}>—</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Rs. {totalCostVal.toLocaleString()}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Rs. {totalSaleVal.toLocaleString()}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-ok)', fontWeight: 700 }}>
+                            {totalCostVal > 0 ? (((totalSaleVal - totalCostVal) / totalCostVal) * 100).toFixed(1) : 0}%
+                          </td>
+                        </tr>
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>

@@ -119,14 +119,25 @@ export class PurchasesService {
     })
   }
 
-  async findAll(page = 1, limit = 50, supplierId?: number, from?: string, to?: string) {
+  async findAll(page = 1, limit = 50, supplierId?: number, from?: string, to?: string, status?: string, search?: string) {
     const skip = (page - 1) * limit
     const where: any = {}
     if (supplierId) where.supplierId = supplierId
+    if (status) where.status = status
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search } },
+        { supplier: { name: { contains: search } } },
+      ]
+    }
     if (from || to) {
       where.purchaseDate = {}
       if (from) where.purchaseDate.gte = new Date(from)
-      if (to) where.purchaseDate.lte = new Date(to)
+      if (to) {
+        const toDate = new Date(to)
+        toDate.setHours(23, 59, 59, 999)
+        where.purchaseDate.lte = toDate
+      }
     }
     const [data, total] = await this.prisma.$transaction([
       this.prisma.purchase.findMany({
@@ -153,6 +164,29 @@ export class PurchasesService {
     })
     if (!purchase) throw new NotFoundException('Purchase not found')
     return purchase
+  }
+
+  async addPayment(purchaseId: number, amount: number) {
+    const purchase = await this.findOne(purchaseId)
+    const balanceDue = Number(purchase.total) - Number(purchase.amountPaid)
+    if (amount <= 0) throw new BadRequestException('Payment amount must be greater than 0')
+    if (amount > balanceDue) throw new BadRequestException(`Payment exceeds balance due (Rs. ${balanceDue.toFixed(2)})`)
+
+    const newAmountPaid = Number(purchase.amountPaid) + amount
+    const newStatus = newAmountPaid >= Number(purchase.total) ? PurchaseStatus.RECEIVED : PurchaseStatus.PARTIAL
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.purchase.update({
+        where: { id: purchaseId },
+        data: { amountPaid: newAmountPaid, status: newStatus },
+        include: { supplier: true },
+      })
+      await tx.supplier.update({
+        where: { id: purchase.supplierId },
+        data: { payableBalance: { decrement: amount } },
+      })
+      return updated
+    })
   }
 
   async createReturn(purchaseId: number, dto: any) {

@@ -59,6 +59,14 @@ export class LicenseService {
       daysRemaining = -1 // -1 = perpetual
     }
 
-    return { valid, daysRemaining, maxPos: license.maxPos, plan: license.plan }
+    const message = !valid
+      ? (daysRemaining === 0 ? 'License expired' : 'License inactive')
+      : daysRemaining === -1
+        ? 'Active — No expiry'
+        : daysRemaining <= 30
+          ? `Expiring in ${daysRemaining} day(s)`
+          : 'License valid'
+
+    return { valid, daysRemaining, maxPos: license.maxPos, plan: license.plan, message }
   }
 }

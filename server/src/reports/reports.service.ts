@@ -8,7 +8,11 @@ export class ReportsService {
   private dateRange(from?: string, to?: string) {
     const range: any = {}
     if (from) range.gte = new Date(from)
-    if (to) range.lte = new Date(to)
+    if (to) {
+      const toDate = new Date(to)
+      toDate.setHours(23, 59, 59, 999)
+      range.lte = toDate
+    }
     return Object.keys(range).length ? range : undefined
   }
 
@@ -190,5 +194,72 @@ export class ReportsService {
       },
       orderBy: { createdAt: 'desc' },
     })
+  }
+
+  // ── Profit & Loss ──────────────────────────────────────────────────────────
+
+  async profitLoss(from?: string, to?: string) {
+    const dr = this.dateRange(from, to)
+
+    const saleWhere: any = { status: 'COMPLETED' }
+    if (dr) saleWhere.createdAt = dr
+
+    const sales = await this.prisma.sale.findMany({
+      where: saleWhere,
+      select: {
+        total: true,
+        items: {
+          select: {
+            quantity: true,
+            total: true,
+            batch: { select: { purchaseRate: true } },
+          },
+        },
+      },
+    })
+
+    let revenue = 0
+    let cogs = 0
+    for (const s of sales) {
+      revenue += Number(s.total)
+      for (const item of s.items) {
+        cogs += item.quantity * Number(item.batch.purchaseRate)
+      }
+    }
+
+    const grossProfit = revenue - cogs
+    const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0
+
+    const expWhere: any = {}
+    if (dr) expWhere.date = dr
+    const expAgg = await this.prisma.expense.aggregate({
+      where: expWhere,
+      _sum: { amount: true },
+    })
+    const totalExpenses = Number(expAgg._sum.amount ?? 0)
+
+    const incWhere: any = {}
+    if (dr) incWhere.date = dr
+    const incAgg = await this.prisma.income.aggregate({
+      where: incWhere,
+      _sum: { amount: true },
+    })
+    const otherIncome = Number(incAgg._sum.amount ?? 0)
+
+    const netProfit = grossProfit - totalExpenses + otherIncome
+
+    const r = (n: number) => Math.round(n * 100) / 100
+
+    return {
+      period: { from: from ?? null, to: to ?? null },
+      revenue: r(revenue),
+      cogs: r(cogs),
+      grossProfit: r(grossProfit),
+      grossMargin: r(grossMargin),
+      expenses: r(totalExpenses),
+      otherIncome: r(otherIncome),
+      netProfit: r(netProfit),
+      salesCount: sales.length,
+    }
   }
 }

@@ -17,8 +17,12 @@ export class SuppliersController {
     @Query('page') page: string,
     @Query('limit') limit: string,
     @Query('search') search: string,
+    @Query('isActive') isActive: string,
+    @Query('hasPayable') hasPayable: string,
   ) {
-    return this.suppliers.findAll(Number(page) || 1, Number(limit) || 50, search)
+    const activeFilter = isActive === 'true' ? true : isActive === 'false' ? false : undefined
+    const payableFilter = hasPayable === 'true' ? true : hasPayable === 'false' ? false : undefined
+    return this.suppliers.findAll(Number(page) || 1, Number(limit) || 50, search, activeFilter, payableFilter)
   }
 
   @Get(':id')
@@ -34,6 +38,16 @@ export class SuppliersController {
   @Delete(':id')
   deactivate(@Param('id') id: string) {
     return this.suppliers.deactivate(+id)
+  }
+
+  @Patch(':id/reactivate')
+  reactivate(@Param('id') id: string) {
+    return this.suppliers.reactivate(+id)
+  }
+
+  @Post(':id/payments')
+  makePayment(@Param('id') id: string, @Body() body: any) {
+    return this.suppliers.makePayment(+id, body)
   }
 
   @Get(':id/ledger')

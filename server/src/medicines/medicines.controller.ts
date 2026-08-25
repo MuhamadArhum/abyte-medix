@@ -23,8 +23,24 @@ export class MedicinesController {
   }
 
   @Get()
-  findAll(@Query('page') page: string, @Query('limit') limit: string, @Query('search') search: string) {
-    return this.medicines.findAll(Number(page) || 1, Number(limit) || 50, search)
+  findAll(
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('search') search: string,
+    @Query('categoryId') categoryId: string,
+    @Query('manufacturerId') manufacturerId: string,
+    @Query('prescriptionRequired') prescriptionRequired: string,
+    @Query('isActive') isActive: string,
+  ) {
+    return this.medicines.findAll(
+      Number(page) || 1,
+      Number(limit) || 50,
+      search || undefined,
+      categoryId ? Number(categoryId) : undefined,
+      manufacturerId ? Number(manufacturerId) : undefined,
+      prescriptionRequired !== undefined && prescriptionRequired !== '' ? prescriptionRequired === 'true' : undefined,
+      isActive !== undefined && isActive !== '' ? isActive === 'true' : undefined,
+    )
   }
 
   @Get(':id')

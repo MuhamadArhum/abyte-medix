@@ -118,12 +118,15 @@ export class SalesService {
         })
       }
 
-      // Update customer balance if credit payment
-      if (dto.customerId && dto.paymentMethod === 'CREDIT') {
-        await tx.customer.update({
-          where: { id: dto.customerId },
-          data: { outstandingBalance: { increment: dto.total - dto.amountPaid } },
-        })
+      // Update customer balance if credit or split payment
+      if (dto.customerId && (dto.paymentMethod === 'CREDIT' || dto.paymentMethod === 'SPLIT')) {
+        const creditPortion = dto.total - dto.amountPaid
+        if (creditPortion > 0) {
+          await tx.customer.update({
+            where: { id: dto.customerId },
+            data: { outstandingBalance: { increment: creditPortion } },
+          })
+        }
       }
 
       // If sale was created from a quotation, delete the quotation
@@ -139,15 +142,37 @@ export class SalesService {
     })
   }
 
-  async findAll(page = 1, limit = 50, from?: string, to?: string, customerId?: number) {
+  async findAll(
+    page = 1, limit = 50,
+    from?: string, to?: string,
+    customerId?: number, search?: string,
+    paymentMethod?: string, status?: string,
+  ) {
     const skip = (page - 1) * limit
     const where: any = {}
+
     if (from || to) {
       where.createdAt = {}
       if (from) where.createdAt.gte = new Date(from)
-      if (to) where.createdAt.lte = new Date(to)
+      if (to) {
+        const toDate = new Date(to)
+        toDate.setHours(23, 59, 59, 999)
+        where.createdAt.lte = toDate
+      }
     }
     if (customerId) where.customerId = customerId
+    if (paymentMethod) where.paymentMethod = paymentMethod
+    if (status) {
+      where.status = status
+    } else {
+      where.status = 'COMPLETED'
+    }
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search } },
+        { customer: { name: { contains: search } } },
+      ]
+    }
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.sale.findMany({

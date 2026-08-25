@@ -28,17 +28,29 @@ export class MedicinesService {
     })
   }
 
-  async findAll(page = 1, limit = 50, search?: string) {
+  async findAll(
+    page = 1,
+    limit = 50,
+    search?: string,
+    categoryId?: number,
+    manufacturerId?: number,
+    prescriptionRequired?: boolean,
+    isActive?: boolean,
+  ) {
     const skip = (page - 1) * limit
-    const where = search
-      ? {
-          OR: [
-            { brandName: { contains: search } },
-            { genericName: { contains: search } },
-            { barcode: { contains: search } },
-          ],
-        }
-      : {}
+    const where: any = { isActive: isActive ?? true }
+
+    if (search) {
+      where.OR = [
+        { brandName: { contains: search } },
+        { genericName: { contains: search } },
+        { barcode: { contains: search } },
+        { productCode: { contains: search } },
+      ]
+    }
+    if (categoryId) where.categoryId = categoryId
+    if (manufacturerId) where.manufacturerId = manufacturerId
+    if (prescriptionRequired !== undefined) where.prescriptionRequired = prescriptionRequired
 
     const [medicines, total] = await this.prisma.$transaction([
       this.prisma.medicine.findMany({

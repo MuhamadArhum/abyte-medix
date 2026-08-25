@@ -40,7 +40,8 @@ export default function LicensePage() {
     ? Math.ceil((new Date(license.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null
 
-  const licenseStatus = license?.isActive
+  const isActive = license?.status === 'ACTIVE'
+  const licenseStatus = isActive
     ? (daysRemaining !== null && daysRemaining <= 30 ? 'warning' : 'active')
     : 'inactive'
 
@@ -89,7 +90,7 @@ export default function LicensePage() {
                 { label: 'Plan', value: license.plan },
                 { label: 'Max POS Terminals', value: license.maxPos },
                 { label: 'Expiry Date', value: license.expiryDate ? new Date(license.expiryDate).toLocaleDateString() : '—' },
-                { label: 'Days Remaining', value: daysRemaining !== null ? `${daysRemaining} days` : '—' },
+                { label: 'Days Remaining', value: daysRemaining === null ? 'Perpetual' : daysRemaining <= 0 ? 'Expired' : `${daysRemaining} days` },
                 { label: 'Status', value: status?.message ?? '—' },
               ].map(item => (
                 <div key={item.label}>

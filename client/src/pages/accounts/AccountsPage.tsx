@@ -19,18 +19,20 @@ function KpiCard({ label, value, color }: { label: string; value: string; color?
 
 function SimpleTable({ headers, rows, loading }: { headers: string[]; rows: React.ReactNode[][]; loading?: boolean }) {
   return (
-    <div className="card" style={{ overflow: 'hidden' }}>
+    <div className="card">
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
       ) : (
-        <table className="tbl">
-          <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={headers.length} style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--steel)' }}>No records</td></tr>
-            ) : rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="tbl">
+            <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan={headers.length} style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--steel)' }}>No records</td></tr>
+              ) : rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
@@ -39,7 +41,7 @@ function SimpleTable({ headers, rows, loading }: { headers: string[]; rows: Reac
 export default function AccountsPage() {
   const qc = useQueryClient()
   const today = new Date().toISOString().split('T')[0]
-  const monthStart = today.slice(0, 8) + '01'
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
   const [tab, setTab] = useState<Tab>('summary')
   const [from, setFrom] = useState(monthStart)
@@ -172,8 +174,8 @@ export default function AccountsPage() {
           </div>
           <SimpleTable loading={payLoading} headers={['Date', 'Type', 'Party', 'Method', 'Amount']}
             rows={(payments?.data ?? payments ?? []).map((p: any) => [
-              new Date(p.date ?? p.createdAt).toLocaleDateString(),
-              <span className="badge badge-blue">{p.type}</span>,
+              new Date(p.createdAt).toLocaleDateString(),
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: p.type === 'CUSTOMER_RECEIPT' ? '#E4F5EC' : '#FBE7E2', color: p.type === 'CUSTOMER_RECEIPT' ? '#2F8F5F' : '#C1462F' }}>{p.type === 'CUSTOMER_RECEIPT' ? 'Received' : 'Paid Out'}</span>,
               p.customer?.name ?? p.supplier?.name ?? '—',
               <span style={{ color: 'var(--steel)' }}>{p.method}</span>,
               <span className="mono" style={{ fontWeight: 700 }}>Rs. {Number(p.amount).toLocaleString()}</span>,

@@ -175,20 +175,27 @@ export default function DashboardPage() {
             </div>
           ))}
 
-          {nearExpiry.slice(0, 3).map((b: any) => (
-            <div key={b.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              fontSize: 12.5, padding: '7px 0', borderBottom: `1px solid ${C.border}`,
-            }}>
-              <div>
-                <div style={{ color: C.text }}>{b.medicine?.brandName}</div>
-                <div style={{ fontSize: 11, color: C.faint }}>Batch {b.batchNumber}</div>
+          {nearExpiry.slice(0, 4).map((b: any) => {
+            const daysLeft = Math.ceil((new Date(b.expiryDate).getTime() - Date.now()) / 86400000)
+            const urgent = daysLeft <= 30
+            const expColor = urgent ? C.danger : C.expiry
+            const expBg = urgent ? C.dangerBg : C.expiryBg
+            const label = daysLeft <= 0 ? 'EXPIRED' : daysLeft <= 30 ? `${daysLeft}d left` : `${daysLeft}d left`
+            return (
+              <div key={b.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                fontSize: 12.5, padding: '7px 0', borderBottom: `1px solid ${C.border}`,
+              }}>
+                <div>
+                  <div style={{ color: C.text }}>{b.medicine?.brandName}</div>
+                  <div style={{ fontSize: 11, color: C.faint }}>Batch {b.batchNumber} · Qty {b.quantity}</div>
+                </div>
+                <span style={{ color: expColor, fontWeight: 700, background: expBg, fontSize: 10.5, padding: '2px 8px', borderRadius: 'var(--radius)', whiteSpace: 'nowrap' }}>
+                  {label}
+                </span>
               </div>
-              <span style={{ color: C.expiry, fontWeight: 700, background: C.expiryBg, fontSize: 10.5, padding: '2px 8px', borderRadius: 'var(--radius)' }}>
-                Expiring
-              </span>
-            </div>
-          ))}
+            )
+          })}
 
           {lowStock.length === 0 && nearExpiry.length === 0 && (
             <div style={{ fontSize: 12.5, color: C.subtext }}>Stock levels look healthy.</div>

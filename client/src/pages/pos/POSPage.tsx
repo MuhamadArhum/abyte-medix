@@ -9,6 +9,7 @@ import {
 import { api } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
 import PrintA4, { type SaleReceiptData } from '../../components/ui/PrintA4'
+import PrintThermal from '../../components/ui/PrintThermal'
 import ShiftBanner from './ShiftBanner'
 
 const C = {
@@ -225,13 +226,15 @@ export default function POSPage() {
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDrop, setShowCustomerDrop] = useState(false)
   const [highlightedCustomerIdx, setHighlightedCustomerIdx] = useState(-1)
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH')
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT' | 'SPLIT'>('CASH')
+  const [splitCashAmount, setSplitCashAmount] = useState('')
   const [amountPaid, setAmountPaid] = useState('')
   const [notes, setNotes] = useState('')
   const [receipt, setReceipt] = useState<any>(null)
   const [showHelp, setShowHelp] = useState(false)
   const [lastReceipt, setLastReceipt] = useState<any>(null)
   const [printData, setPrintData] = useState<SaleReceiptData | null>(null)
+  const [printMode, setPrintMode] = useState<'thermal' | 'a4'>('thermal')
   const [activeQuotationId, setActiveQuotationId] = useState<number | null>(null)
 
   /* ── Load quotation from Quotations page ── */
@@ -376,7 +379,7 @@ export default function POSPage() {
   const clearCartRef = useRef<(() => void) | null>(null)
   const completeSaleRef = useRef<(() => void) | null>(null)
   const newSaleRef = useRef<(() => void) | null>(null)
-  const setPaymentMethodRef = useRef<((m: 'CASH' | 'CREDIT') => void) | null>(null)
+  const setPaymentMethodRef = useRef<((m: 'CASH' | 'CREDIT' | 'SPLIT') => void) | null>(null)
   const removeLastRef = useRef<(() => void) | null>(null)
   const adjustLastRef = useRef<((delta: number) => void) | null>(null)
 
@@ -584,16 +587,53 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
   // Bind action refs (updated each render so shortcuts use fresh state)
   const completeSale = () => {
     if (cart.length === 0) { toast.error('Cart is empty (F2 to search)'); return }
-    const effectivePaid = parseFloat(amountPaid) || total
-    if (paymentMethod === 'CASH' && effectivePaid < total) { toast.error('Amount paid is less than total (F6 to enter)'); return }
-    saleMutation.mutate({
-      customerId: customer?.id,
-      items: cart.map(i => ({ batchId: i.batchId, quantity: i.qty, saleRate: i.saleRate, discount: i.discount, taxRate: i.taxRate, total: i.total })),
-      subtotal, discountAmount: discountAmt, taxAmount: taxAmt, total,
-      amountPaid: effectivePaid, changeAmount: Math.max(0, effectivePaid - total), paymentMethod,
-      notes: notes || undefined,
-      quotationId: activeQuotationId ?? undefined,
-    })
+
+    if (paymentMethod === 'CASH') {
+      const effectivePaid = parseFloat(amountPaid) || total
+      if (effectivePaid < total) { toast.error('Amount paid is less than total (F6 to enter)'); return }
+      saleMutation.mutate({
+        customerId: customer?.id,
+        items: cart.map(i => ({ batchId: i.batchId, quantity: i.qty, saleRate: i.saleRate, discount: i.discount, taxRate: i.taxRate, total: i.total })),
+        subtotal, discountAmount: discountAmt, taxAmount: taxAmt, total,
+        amountPaid: effectivePaid, changeAmount: Math.max(0, effectivePaid - total), paymentMethod: 'CASH',
+        notes: notes || undefined,
+        quotationId: activeQuotationId ?? undefined,
+      })
+    } else if (paymentMethod === 'CREDIT') {
+      if (!customer) { toast.error('Select a customer for credit sales'); return }
+      const creditRemaining = Number(customer.creditLimit) - Number(customer.outstandingBalance)
+      if (total > creditRemaining) {
+        toast.error(`Credit limit exceeded. Available: Rs ${Math.round(creditRemaining).toLocaleString()}`)
+        return
+      }
+      saleMutation.mutate({
+        customerId: customer.id,
+        items: cart.map(i => ({ batchId: i.batchId, quantity: i.qty, saleRate: i.saleRate, discount: i.discount, taxRate: i.taxRate, total: i.total })),
+        subtotal, discountAmount: discountAmt, taxAmount: taxAmt, total,
+        amountPaid: 0, changeAmount: 0, paymentMethod: 'CREDIT',
+        notes: notes || undefined,
+        quotationId: activeQuotationId ?? undefined,
+      })
+    } else if (paymentMethod === 'SPLIT') {
+      if (!customer) { toast.error('Select a customer for split payment'); return }
+      const cash = parseFloat(splitCashAmount) || 0
+      if (cash <= 0) { toast.error('Enter cash amount for split payment'); return }
+      if (cash >= total) { toast.error('Cash covers full total — use CASH payment instead'); return }
+      const creditPortion = total - cash
+      const creditRemaining = Number(customer.creditLimit) - Number(customer.outstandingBalance)
+      if (creditPortion > creditRemaining) {
+        toast.error(`Credit portion Rs ${Math.round(creditPortion).toLocaleString()} exceeds available credit Rs ${Math.round(creditRemaining).toLocaleString()}`)
+        return
+      }
+      saleMutation.mutate({
+        customerId: customer.id,
+        items: cart.map(i => ({ batchId: i.batchId, quantity: i.qty, saleRate: i.saleRate, discount: i.discount, taxRate: i.taxRate, total: i.total })),
+        subtotal, discountAmount: discountAmt, taxAmount: taxAmt, total,
+        amountPaid: cash, changeAmount: 0, paymentMethod: 'SPLIT',
+        notes: notes || undefined,
+        quotationId: activeQuotationId ?? undefined,
+      })
+    }
   }
   completeSaleRef.current = completeSale
 
@@ -605,16 +645,17 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
 
   const clearCart = () => {
     if (cart.length === 0) return
-    setCart([]); setCustomer(null); setAmountPaid(''); setActiveQuotationId(null)
+    setCart([]); setCustomer(null); setAmountPaid(''); setSplitCashAmount(''); setActiveQuotationId(null)
     toast.info('Cart cleared')
     searchRef.current?.focus()
   }
   clearCartRef.current = clearCart
 
-  const setPaymentMethodAction = (m: 'CASH' | 'CREDIT') => {
+  const setPaymentMethodAction = (m: 'CASH' | 'CREDIT' | 'SPLIT') => {
     setPaymentMethod(m)
-    if (m === 'CASH') { setAmountPaid(total.toFixed(2)) }
-    else if (m === 'CREDIT') setAmountPaid('0')
+    if (m === 'CASH') { setAmountPaid(total.toFixed(2)); setSplitCashAmount('') }
+    else if (m === 'CREDIT') { setAmountPaid('0'); setSplitCashAmount('') }
+    else if (m === 'SPLIT') { setAmountPaid(''); setSplitCashAmount('') }
   }
   setPaymentMethodRef.current = setPaymentMethodAction
 
@@ -667,6 +708,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
   const newSale = () => {
     setReceipt(null)
     setActiveQuotationId(null)
+    setSplitCashAmount('')
     setTimeout(() => { searchRef.current?.focus(); searchRef.current?.select() }, 80)
   }
   newSaleRef.current = newSale
@@ -1030,54 +1072,52 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
             <span>Total</span><span style={MONO}>{fmtRs(total)}</span>
           </div>
 
-          {/* Payment Method — CASH / CREDIT */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+          {/* Payment Method — CASH / SPLIT / CREDIT */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 12 }}>
             <button
               ref={cashBtnRef}
               onClick={() => { setPaymentMethodAction('CASH'); setTimeout(() => { amountPaidRef.current?.focus(); amountPaidRef.current?.select() }, 30) }}
               onKeyDown={e => {
                 if (e.key === 'Tab') { e.preventDefault(); creditBtnRef.current?.focus() }
-                if (e.key === ' ' || e.key === 'Enter') {
-                  e.preventDefault()
-                  setPaymentMethodAction('CASH')
-                  setTimeout(() => { amountPaidRef.current?.focus(); amountPaidRef.current?.select() }, 30)
-                }
+                if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setPaymentMethodAction('CASH'); setTimeout(() => { amountPaidRef.current?.focus(); amountPaidRef.current?.select() }, 30) }
               }}
               style={{
-                flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 background: paymentMethod === 'CASH' ? C.primary : '#fff',
                 color: paymentMethod === 'CASH' ? '#fff' : C.subtext,
                 border: paymentMethod === 'CASH' ? 'none' : `1px solid ${C.border}`,
                 outline: 'none',
               }}
-            >
-              CASH
-            </button>
+            >CASH</button>
+            <button
+              onClick={() => setPaymentMethodAction('SPLIT')}
+              style={{
+                flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                background: paymentMethod === 'SPLIT' ? '#7C3AED' : '#fff',
+                color: paymentMethod === 'SPLIT' ? '#fff' : C.subtext,
+                border: paymentMethod === 'SPLIT' ? 'none' : `1px solid ${C.border}`,
+                outline: 'none',
+              }}
+            >SPLIT</button>
             <button
               ref={creditBtnRef}
               onClick={() => { setPaymentMethodAction('CREDIT'); setTimeout(() => { checkoutBtnRef.current?.focus() }, 30) }}
               onKeyDown={e => {
                 if (e.key === 'Tab') { e.preventDefault(); cashBtnRef.current?.focus() }
-                if (e.key === ' ' || e.key === 'Enter') {
-                  e.preventDefault()
-                  setPaymentMethodAction('CREDIT')
-                  setTimeout(() => { checkoutBtnRef.current?.focus() }, 30)
-                }
+                if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setPaymentMethodAction('CREDIT'); setTimeout(() => { checkoutBtnRef.current?.focus() }, 30) }
               }}
               style={{
-                flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 background: paymentMethod === 'CREDIT' ? C.primary : '#fff',
                 color: paymentMethod === 'CREDIT' ? '#fff' : C.subtext,
                 border: paymentMethod === 'CREDIT' ? 'none' : `1px solid ${C.border}`,
                 outline: 'none',
               }}
-            >
-              CREDIT
-            </button>
+            >CREDIT</button>
           </div>
 
           {/* Amount Paid — F6 */}
-          {paymentMethod !== 'CREDIT' && (
+          {paymentMethod === 'CASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
               <input
                 ref={amountPaidRef}
@@ -1094,6 +1134,32 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
               {amountPaid !== '' && (
                 <div style={{ fontSize: 12, fontWeight: 700, minWidth: 80, textAlign: 'right', ...MONO, color: change < 0 ? C.danger : C.primary }}>
                   Chg {fmtRs(change)}
+                </div>
+              )}
+            </div>
+          )}
+          {paymentMethod === 'SPLIT' && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <input
+                  type="number"
+                  placeholder="Cash amount"
+                  value={splitCashAmount}
+                  onChange={e => setSplitCashAmount(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); completeSaleRef.current?.() } }}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+              </div>
+              {splitCashAmount !== '' && parseFloat(splitCashAmount) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 10px', background: 'rgba(124,58,237,0.08)', borderRadius: 8, ...MONO }}>
+                  <span style={{ color: '#7C3AED', fontWeight: 600 }}>Cash</span>
+                  <span style={{ color: '#7C3AED', fontWeight: 700 }}>Rs {Math.round(parseFloat(splitCashAmount) || 0).toLocaleString()}</span>
+                </div>
+              )}
+              {splitCashAmount !== '' && parseFloat(splitCashAmount) > 0 && total - parseFloat(splitCashAmount) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 10px', background: C.dangerBg, borderRadius: 8, ...MONO, marginTop: 4 }}>
+                  <span style={{ color: C.danger, fontWeight: 600 }}>Credit</span>
+                  <span style={{ color: C.danger, fontWeight: 700 }}>Rs {Math.round(total - (parseFloat(splitCashAmount) || 0)).toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -1268,16 +1334,31 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
               </div>
               <div style={{ textAlign: 'center', fontSize: 10, color: C.faint, marginTop: 14 }}>Thank you — get well soon!</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                <button onClick={() => {
-                  setPrintData(receipt)
-                  setTimeout(() => window.print(), 120)
-                }} style={{
-                  flex: 1, padding: '9px 12px', borderRadius: 9, border: `1px solid ${C.border}`,
-                  background: '#fff', color: C.text, fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                }}>
-                  <Printer size={14} /> Print A4 <span style={{ fontSize: 9, opacity: 0.6 }}>F7</span>
-                </button>
+                <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                  <button onClick={() => {
+                    setPrintData(receipt)
+                    setTimeout(() => window.print(), 120)
+                  }} style={{
+                    flex: 1, padding: '9px 10px', borderRadius: 9, border: `1px solid ${C.border}`,
+                    background: '#fff', color: C.text, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  }}>
+                    <Printer size={14} />
+                    {printMode === 'thermal' ? 'Thermal' : 'Print A4'}
+                    <span style={{ fontSize: 9, opacity: 0.6 }}>F7</span>
+                  </button>
+                  <button
+                    onClick={() => setPrintMode(m => m === 'thermal' ? 'a4' : 'thermal')}
+                    title={`Switch to ${printMode === 'thermal' ? 'A4' : 'Thermal (58mm)'}`}
+                    style={{
+                      padding: '9px 10px', borderRadius: 9, border: `1px solid ${C.border}`,
+                      background: '#fff', color: C.subtext, fontSize: 10,
+                      cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {printMode === 'thermal' ? 'A4' : '58mm'}
+                  </button>
+                </div>
                 <button onClick={newSale} style={{
                   flex: 1, padding: '9px 16px', borderRadius: 9, border: 'none',
                   background: C.primary, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
@@ -1292,10 +1373,15 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
         </div>
       )}
 
-      {/* A4 invoice rendered into #print-root portal */}
-      {printData && (
+      {printData && printMode === 'a4' && (
         <PrintA4
           type="sale"
+          data={printData}
+          onAfterPrint={() => setPrintData(null)}
+        />
+      )}
+      {printData && printMode === 'thermal' && (
+        <PrintThermal
           data={printData}
           onAfterPrint={() => setPrintData(null)}
         />

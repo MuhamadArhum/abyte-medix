@@ -20,8 +20,16 @@ export class SalesController {
     @Query('from') from: string,
     @Query('to') to: string,
     @Query('customerId') customerId: string,
+    @Query('search') search: string,
+    @Query('paymentMethod') paymentMethod: string,
+    @Query('status') status: string,
   ) {
-    return this.sales.findAll(Number(page) || 1, Number(limit) || 50, from, to, customerId ? +customerId : undefined)
+    return this.sales.findAll(
+      Number(page) || 1, Number(limit) || 50,
+      from || undefined, to || undefined,
+      customerId ? +customerId : undefined,
+      search || undefined, paymentMethod || undefined, status || undefined,
+    )
   }
 
   @Get('summary')

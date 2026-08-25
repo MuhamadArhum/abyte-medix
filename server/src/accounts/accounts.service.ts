@@ -37,7 +37,7 @@ export class AccountsService {
     if (from || to) {
       where.date = {}
       if (from) where.date.gte = new Date(from)
-      if (to) where.date.lte = new Date(to)
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.date.lte = d }
     }
     const [data, total] = await this.prisma.$transaction([
       this.prisma.expense.findMany({ where, skip, take: limit, orderBy: { date: 'desc' } }),
@@ -73,7 +73,7 @@ export class AccountsService {
     if (from || to) {
       where.date = {}
       if (from) where.date.gte = new Date(from)
-      if (to) where.date.lte = new Date(to)
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.date.lte = d }
     }
     const [data, total] = await this.prisma.$transaction([
       this.prisma.income.findMany({ where, skip, take: limit, orderBy: { date: 'desc' } }),
@@ -166,28 +166,33 @@ export class AccountsService {
 
   async getSummary(from?: string, to?: string) {
     const dateFilter: any = {}
-    if (from || to) {
-      if (from) dateFilter.gte = new Date(from)
-      if (to) dateFilter.lte = new Date(to)
-    }
+    if (from) dateFilter.gte = new Date(from)
+    if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); dateFilter.lte = d }
 
     const saleWhere: any = { status: 'COMPLETED' }
     const purchaseWhere: any = {}
     const expenseWhere: any = {}
     const incomeWhere: any = {}
+    const paymentWhere: any = {}
 
     if (Object.keys(dateFilter).length > 0) {
       saleWhere.createdAt = dateFilter
       purchaseWhere.purchaseDate = dateFilter
       expenseWhere.date = dateFilter
       incomeWhere.date = dateFilter
+      paymentWhere.createdAt = dateFilter
     }
 
-    const [salesAgg, purchasesAgg, expensesAgg, incomeAgg] = await Promise.all([
+    const [salesAgg, discountAgg, taxAgg, cashSalesAgg, purchasesAgg, expensesAgg, incomeAgg, custReceiptsAgg, supplierPaymentsAgg] = await Promise.all([
       this.prisma.sale.aggregate({ where: saleWhere, _sum: { total: true } }),
+      this.prisma.sale.aggregate({ where: saleWhere, _sum: { discountAmount: true } }),
+      this.prisma.sale.aggregate({ where: saleWhere, _sum: { taxAmount: true } }),
+      this.prisma.sale.aggregate({ where: { ...saleWhere, paymentMethod: 'CASH' }, _sum: { total: true } }),
       this.prisma.purchase.aggregate({ where: purchaseWhere, _sum: { total: true } }),
       this.prisma.expense.aggregate({ where: expenseWhere, _sum: { amount: true } }),
       this.prisma.income.aggregate({ where: incomeWhere, _sum: { amount: true } }),
+      this.prisma.payment.aggregate({ where: { ...paymentWhere, type: PaymentType.CUSTOMER_RECEIPT }, _sum: { amount: true } }),
+      this.prisma.payment.aggregate({ where: { ...paymentWhere, type: PaymentType.SUPPLIER_PAYMENT }, _sum: { amount: true } }),
     ])
 
     const totalSales = Number(salesAgg._sum.total ?? 0)
@@ -197,7 +202,24 @@ export class AccountsService {
     const grossProfit = totalSales - totalPurchases
     const netProfit = grossProfit - totalExpenses + totalIncome
 
-    return { totalSales, totalPurchases, totalExpenses, totalIncome, grossProfit, netProfit }
+    const totalDiscount = Number(discountAgg._sum.discountAmount ?? 0)
+    const totalTax = Number(taxAgg._sum.taxAmount ?? 0)
+    const cashIn = Number(cashSalesAgg._sum.total ?? 0) + Number(custReceiptsAgg._sum.amount ?? 0)
+    const cashOut = totalExpenses + Number(supplierPaymentsAgg._sum.amount ?? 0)
+
+    const r = (n: number) => Math.round(n * 100) / 100
+    return {
+      totalSales: r(totalSales),
+      totalPurchases: r(totalPurchases),
+      totalExpenses: r(totalExpenses),
+      totalIncome: r(totalIncome),
+      grossProfit: r(grossProfit),
+      netProfit: r(netProfit),
+      totalDiscount: r(totalDiscount),
+      totalTax: r(totalTax),
+      cashIn: r(cashIn),
+      cashOut: r(cashOut),
+    }
   }
 
   // ── Cash Report ───────────────────────────────────────────────────────────
@@ -235,7 +257,9 @@ export class AccountsService {
     const salesCash = Number(salesAgg._sum.total ?? 0)
     const paymentsReceived = Number(paymentsAgg._sum.amount ?? 0)
     const expensesPaid = Number(expensesAgg._sum.amount ?? 0)
-    const closingBalance = openingBalance + salesCash + paymentsReceived - expensesPaid
+    const cashIn = salesCash + paymentsReceived
+    const cashOut = expensesPaid
+    const closingBalance = openingBalance + cashIn - cashOut
 
     return {
       date: start.toISOString().slice(0, 10),
@@ -243,6 +267,8 @@ export class AccountsService {
       salesCash,
       paymentsReceived,
       expensesPaid,
+      cashIn,
+      cashOut,
       closingBalance,
     }
   }

@@ -17,8 +17,12 @@ export class CustomersController {
     @Query('page') page: string,
     @Query('limit') limit: string,
     @Query('search') search: string,
+    @Query('isActive') isActive: string,
+    @Query('hasBalance') hasBalance: string,
   ) {
-    return this.customers.findAll(Number(page) || 1, Number(limit) || 50, search)
+    const activeFilter = isActive === 'true' ? true : isActive === 'false' ? false : undefined
+    const balanceFilter = hasBalance === 'true' ? true : hasBalance === 'false' ? false : undefined
+    return this.customers.findAll(Number(page) || 1, Number(limit) || 50, search, activeFilter, balanceFilter)
   }
 
   @Get(':id')
@@ -34,6 +38,16 @@ export class CustomersController {
   @Delete(':id')
   deactivate(@Param('id') id: string) {
     return this.customers.deactivate(+id)
+  }
+
+  @Patch(':id/reactivate')
+  reactivate(@Param('id') id: string) {
+    return this.customers.reactivate(+id)
+  }
+
+  @Post(':id/payments')
+  receivePayment(@Param('id') id: string, @Body() body: any) {
+    return this.customers.receivePayment(+id, body)
   }
 
   @Get(':id/ledger')

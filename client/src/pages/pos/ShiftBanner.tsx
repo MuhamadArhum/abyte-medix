@@ -15,6 +15,7 @@ interface ShiftData {
   totalSales: number
   cashSales: number
   creditSales: number
+  splitCash: number
 }
 
 const MONO: React.CSSProperties = { fontFamily: 'var(--font-mono)' }
@@ -95,6 +96,7 @@ export default function ShiftBanner({ onShiftChange }: { onShiftChange?: () => v
           <div style={{ display: 'flex', gap: 16 }}>
             <span style={{ color: '#75797D' }}>Sales: <b style={{ color: '#17181A', ...MONO }}>{shift.saleCount}</b></span>
             <span style={{ color: '#75797D' }}>Cash: <b style={{ color: '#3E8E5A', ...MONO }}>{fmtRs(shift.cashSales)}</b></span>
+            {(shift.splitCash ?? 0) > 0 && <span style={{ color: '#75797D' }}>Split: <b style={{ color: '#7C3AED', ...MONO }}>{fmtRs(shift.splitCash ?? 0)}</b></span>}
             <span style={{ color: '#75797D' }}>Credit: <b style={{ color: '#C23B2E', ...MONO }}>{fmtRs(shift.creditSales)}</b></span>
             <span style={{ color: '#75797D' }}>Total: <b style={{ color: '#D9A441', ...MONO }}>{fmtRs(shift.totalSales)}</b></span>
           </div>
@@ -188,7 +190,7 @@ export default function ShiftBanner({ onShiftChange }: { onShiftChange?: () => v
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70,
         }} onClick={() => setShowCloseModal(false)}>
           <div style={{
-            background: '#fff', borderRadius: 14, width: 420, padding: 28,
+            background: '#fff', borderRadius: 14, width: 440, padding: 28,
             boxShadow: '0 16px 48px rgba(27,30,33,0.2)',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -204,6 +206,7 @@ export default function ShiftBanner({ onShiftChange }: { onShiftChange?: () => v
                 { label: 'Opening Balance', value: fmtRs(Number(shift.openingBalance)) },
                 { label: 'Total Sales', value: `${shift.saleCount} invoices` },
                 { label: 'Cash Sales', value: fmtRs(shift.cashSales), color: '#3E8E5A' },
+                { label: 'Split (Cash)', value: fmtRs(shift.splitCash ?? 0), color: '#7C3AED' },
                 { label: 'Credit Sales', value: fmtRs(shift.creditSales), color: '#C23B2E' },
                 { label: 'Total Revenue', value: fmtRs(shift.totalSales), color: '#D9A441', bold: true },
               ].map(row => (
@@ -214,20 +217,50 @@ export default function ShiftBanner({ onShiftChange }: { onShiftChange?: () => v
               ))}
             </div>
 
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#75797D', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 6 }}>
-              Closing Cash Balance (Rs)
-            </label>
-            <input
-              type="number"
-              autoFocus
-              value={closingBalance}
-              onChange={e => setClosingBalance(e.target.value)}
-              placeholder="Enter cash counted in drawer"
-              style={inp}
-            />
+            {/* Variance Section */}
+            {(() => {
+              const expectedCash = Number(shift.openingBalance) + shift.cashSales + (shift.splitCash ?? 0)
+              const actualCash = parseFloat(closingBalance) || 0
+              const variance = closingBalance !== '' ? actualCash - expectedCash : null
+              const varColor = variance === null ? '#75797D' : variance === 0 ? '#3E8E5A' : variance > 0 ? '#C98A1E' : '#C23B2E'
+              const varLabel = variance === null ? '—' : variance === 0 ? 'Balanced ✓' : variance > 0 ? `+${fmtRs(variance)} (Over)` : `${fmtRs(variance)} (Short)`
 
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#75797D', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginTop: 12, marginBottom: 6 }}>
-              Notes (optional)
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#75797D', marginBottom: 6 }}>
+                    <span>Expected Cash in Drawer</span>
+                    <span style={{ fontWeight: 700, ...MONO, color: '#17181A' }}>{fmtRs(expectedCash)}</span>
+                  </div>
+
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#75797D', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 6 }}>
+                    Actual Cash Counted (Rs)
+                  </label>
+                  <input
+                    type="number"
+                    autoFocus
+                    value={closingBalance}
+                    onChange={e => setClosingBalance(e.target.value)}
+                    placeholder="Count cash in drawer and enter here"
+                    style={inp}
+                  />
+
+                  {closingBalance !== '' && (
+                    <div style={{
+                      marginTop: 10, padding: '10px 14px', borderRadius: 9,
+                      background: variance === 0 ? 'rgba(62,142,90,0.10)' : variance !== null && variance > 0 ? 'rgba(201,138,30,0.12)' : 'rgba(194,59,46,0.10)',
+                      border: `1px solid ${varColor}22`,
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: varColor }}>Variance</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: varColor, ...MONO }}>{varLabel}</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#75797D', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 6 }}>
+              Notes {closingBalance !== '' && parseFloat(closingBalance) !== (Number(shift.openingBalance) + shift.cashSales + (shift.splitCash ?? 0)) ? '(explain variance)' : '(optional)'}
             </label>
             <textarea
               value={closeNotes}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Eye } from 'lucide-react'
+import { Plus, Eye, X } from 'lucide-react'
 import { api } from '../../api/client'
 import Table from '../../components/ui/Table'
 import type { Column } from '../../components/ui/Table'
@@ -38,9 +38,14 @@ export default function PurchasesPage() {
   const qc = useQueryClient()
   const user = useAuthStore(s => s.user)
   const canAdd = canRole(user?.role, ACTION_ROLES.purchases.add)
+  const today = new Date().toISOString().split('T')[0]
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
+  const [from, setFrom] = useState(today)
+  const [to, setTo] = useState(today)
+  const [status, setStatus] = useState('')
+  const [supplierId, setSupplierId] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -73,15 +78,32 @@ export default function PurchasesPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  const { data: suppliersData } = useQuery({
+    queryKey: ['suppliers-list'],
+    queryFn: () => api.get('/suppliers?page=1&limit=200').then(r => r.data),
+  })
+  const suppliersList: { id: number; name: string }[] = suppliersData?.data ?? []
+
   const { data, isLoading } = useQuery({
-    queryKey: ['purchases', page, limit],
-    queryFn: () => api.get(`/purchases?page=${page}&limit=${limit}`).then(r => r.data),
+    queryKey: ['purchases', page, limit, search, from, to, status, supplierId],
+    queryFn: () => api.get(
+      `/purchases?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}` +
+      `&from=${from}&to=${to}&status=${status}&supplierId=${supplierId}`
+    ).then(r => r.data),
   })
 
   const purchases: Purchase[] = data?.data ?? []
   const total: number = data?.total ?? 0
 
-  const statusVariant = (s: string) => s === 'PAID' ? 'ok' : s === 'PARTIAL' ? 'warn' : 'neutral'
+  const pageTotal = purchases.reduce((s, r) => s + Number(r.total), 0)
+  const pagePaid = purchases.reduce((s, r) => s + Number(r.amountPaid), 0)
+  const pageDue = pageTotal - pagePaid
+
+  const hasFilters = search || status || supplierId || from !== today || to !== today
+  const clearFilters = () => { setSearch(''); setStatus(''); setSupplierId(''); setFrom(today); setTo(today); setPage(1) }
+
+  const statusVariant = (s: string): 'green' | 'warn' | 'neutral' =>
+    s === 'RECEIVED' ? 'green' : s === 'PARTIAL' ? 'warn' : 'neutral'
 
   const columns: Column<Purchase>[] = [
     { key: 'invoiceNumber', label: 'Invoice #', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--steel)' }}>{r.invoiceNumber}</span> },
@@ -89,7 +111,15 @@ export default function PurchasesPage() {
     { key: 'purchaseDate', label: 'Date', render: r => <span style={{ color: 'var(--steel)' }}>{new Date(r.purchaseDate).toLocaleDateString()}</span> },
     { key: 'total', label: 'Total', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Rs. {Number(r.total).toLocaleString()}</span> },
     { key: 'amountPaid', label: 'Paid', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-ok)' }}>Rs. {Number(r.amountPaid).toLocaleString()}</span> },
-    { key: 'status', label: 'Status', render: r => <Badge label={r.status} variant={statusVariant(r.status) as any} /> },
+    {
+      key: 'status', label: 'Balance Due', render: r => {
+        const due = Number(r.total) - Number(r.amountPaid)
+        return due > 0
+          ? <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--red-risk)', fontWeight: 700 }}>Rs. {due.toLocaleString()}</span>
+          : <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-ok)' }}>—</span>
+      }
+    },
+    { key: 'status', label: 'Status', render: r => <Badge label={r.status} variant={statusVariant(r.status)} /> },
     { key: 'actions', label: '', render: r => (
       <button onClick={() => setViewPurchase(r)} style={iconBtn} title="View"
         onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--orange)' }}
@@ -99,16 +129,22 @@ export default function PurchasesPage() {
     )},
   ]
 
-  const filtered = search
-    ? purchases.filter(p => p.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) || p.supplier?.name?.toLowerCase().includes(search.toLowerCase()))
-    : purchases
-
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 19, color: 'var(--ink)' }}>Purchases</h1>
-          <div style={{ fontSize: 12.5, color: 'var(--steel)', marginTop: 2 }}>Stock purchase records and payment tracking</div>
+          <div style={{ display: 'flex', gap: 16, marginTop: 4, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--steel)' }}>{total} records</span>
+            {pageTotal > 0 && (
+              <>
+                <span style={{ fontSize: 12.5, color: 'var(--steel)' }}>·</span>
+                <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 600 }}>Total: <span style={{ fontFamily: 'var(--font-mono)' }}>Rs. {pageTotal.toLocaleString()}</span></span>
+                <span style={{ fontSize: 12.5, color: 'var(--green-ok)', fontWeight: 600 }}>Paid: <span style={{ fontFamily: 'var(--font-mono)' }}>Rs. {pagePaid.toLocaleString()}</span></span>
+                {pageDue > 0 && <span style={{ fontSize: 12.5, color: 'var(--red-risk)', fontWeight: 600 }}>Due: <span style={{ fontFamily: 'var(--font-mono)' }}>Rs. {pageDue.toLocaleString()}</span></span>}
+              </>
+            )}
+          </div>
         </div>
         {canAdd && (
           <button onClick={() => setAddOpen(true)} style={{
@@ -123,10 +159,45 @@ export default function PurchasesPage() {
       </div>
 
       <div style={{ background: 'var(--paper-light)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--rule)' }}>
-          <SearchInput inputRef={searchRef} value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search by invoice or supplier… (F2)" />
+        {/* Filter bar */}
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--rule)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <SearchInput inputRef={searchRef} value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search invoice or supplier… (F2)" />
+
+          <span style={{ fontSize: 12, color: 'var(--steel)' }}>From:</span>
+          <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1) }} className="filter-select" />
+          <span style={{ fontSize: 12, color: 'var(--steel)' }}>To:</span>
+          <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1) }} className="filter-select" />
+
+          <select value={supplierId} onChange={e => { setSupplierId(e.target.value); setPage(1) }} className="filter-select" style={{ minWidth: 130 }}>
+            <option value="">All Suppliers</option>
+            {suppliersList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+
+          {/* Status chips */}
+          {[
+            { v: '',         label: 'All' },
+            { v: 'RECEIVED', label: 'Received' },
+            { v: 'PARTIAL',  label: 'Partial' },
+            { v: 'DRAFT',    label: 'Draft' },
+          ].map(s => (
+            <button key={s.v}
+              onClick={() => { setStatus(s.v); setPage(1) }}
+              style={{
+                padding: '4px 11px', borderRadius: 'var(--radius)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                border: status === s.v ? 'none' : '1px solid var(--rule)',
+                background: status === s.v ? 'var(--orange)' : 'var(--paper-light)',
+                color: status === s.v ? '#fff' : 'var(--steel)',
+              }}
+            >{s.label}</button>
+          ))}
+
+          {hasFilters && (
+            <button onClick={clearFilters} style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--steel)', background: 'none', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <X size={11} /> Clear Filters
+            </button>
+          )}
         </div>
-        <Table columns={columns} data={filtered} loading={isLoading} />
+        <Table columns={columns} data={purchases} loading={isLoading} />
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 

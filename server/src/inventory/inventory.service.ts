@@ -10,7 +10,16 @@ export class InventoryService {
     private audit: AuditService,
   ) {}
 
-  async getStock(page = 1, limit = 25, search = '', filter = '') {
+  async getStock(
+    page = 1,
+    limit = 25,
+    search = '',
+    filter = '',
+    expiryDays = 90,
+    categoryId?: number,
+    manufacturerId?: number,
+    sort = 'name_asc',
+  ) {
     const where: any = { isActive: true }
 
     if (search) {
@@ -20,14 +29,33 @@ export class InventoryService {
         { productCode: { contains: search } },
       ]
     }
+    if (categoryId) where.categoryId = categoryId
+    if (manufacturerId) where.manufacturerId = manufacturerId
 
     const batchSelect = {
       id: true, batchNumber: true, expiryDate: true,
       purchaseRate: true, saleRate: true, quantity: true, freeQuantity: true,
     }
 
-    // For status filters we need to aggregate, so fetch matching set then filter
-    if (filter === 'low' || filter === 'out') {
+    const dbOrderBy: any = sort === 'name_desc' ? { brandName: 'desc' } : { brandName: 'asc' }
+
+    const toRow = (m: any) => ({
+      id: m.id, medicineId: m.id,
+      brandName: m.brandName, genericName: m.genericName, strength: m.strength,
+      reorderLevel: m.reorderLevel ?? 10,
+      category: m.category?.name ?? null, manufacturer: m.manufacturer?.name ?? null,
+      totalQty: m.batches.reduce((s: number, b: any) => s + b.quantity, 0),
+      batches: m.batches.map((b: any) => ({ ...b, currentQty: b.quantity })),
+    })
+
+    const applySort = (rows: ReturnType<typeof toRow>[]) => {
+      if (sort === 'qty_asc') return rows.sort((a, b) => a.totalQty - b.totalQty)
+      if (sort === 'qty_desc') return rows.sort((a, b) => b.totalQty - a.totalQty)
+      return rows
+    }
+
+    // Filters that require in-memory aggregation
+    if (filter === 'low' || filter === 'out' || filter === 'expiring') {
       const all = await this.prisma.medicine.findMany({
         where,
         include: {
@@ -35,21 +63,21 @@ export class InventoryService {
           category: { select: { name: true } },
           manufacturer: { select: { name: true } },
         },
-        orderBy: { brandName: 'asc' },
+        orderBy: dbOrderBy,
       })
 
-      const mapped = all.map((m) => ({
-        id: m.id, medicineId: m.id,
-        brandName: m.brandName, genericName: m.genericName, strength: m.strength,
-        reorderLevel: m.reorderLevel ?? 10,
-        category: m.category?.name ?? null, manufacturer: m.manufacturer?.name ?? null,
-        totalQty: m.batches.reduce((s, b) => s + b.quantity, 0),
-        batches: m.batches.map(b => ({ ...b, currentQty: b.quantity })),
-      }))
+      const mapped = all.map(toRow)
 
-      const filtered = filter === 'out'
+      const expiryThreshold = new Date()
+      expiryThreshold.setDate(expiryThreshold.getDate() + expiryDays)
+
+      let filtered = filter === 'out'
         ? mapped.filter(m => m.totalQty === 0)
-        : mapped.filter(m => m.totalQty > 0 && m.totalQty <= m.reorderLevel)
+        : filter === 'expiring'
+          ? mapped.filter(m => m.batches.some((b: any) => b.expiryDate && new Date(b.expiryDate) <= expiryThreshold && b.quantity > 0))
+          : mapped.filter(m => m.totalQty > 0 && m.totalQty <= m.reorderLevel)
+
+      filtered = applySort(filtered)
 
       const total = filtered.length
       const data = filtered.slice((page - 1) * limit, page * limit)
@@ -65,22 +93,14 @@ export class InventoryService {
           category: { select: { name: true } },
           manufacturer: { select: { name: true } },
         },
-        orderBy: { brandName: 'asc' },
+        orderBy: dbOrderBy,
         skip,
         take: limit,
       }),
       this.prisma.medicine.count({ where }),
     ])
 
-    const data = medicines.map((m) => ({
-      id: m.id, medicineId: m.id,
-      brandName: m.brandName, genericName: m.genericName, strength: m.strength,
-      reorderLevel: m.reorderLevel ?? 10,
-      category: m.category?.name ?? null, manufacturer: m.manufacturer?.name ?? null,
-      totalQty: m.batches.reduce((s, b) => s + b.quantity, 0),
-      batches: m.batches.map(b => ({ ...b, currentQty: b.quantity })),
-    }))
-
+    const data = applySort(medicines.map(toRow))
     return { data, total, page, limit }
   }
 
@@ -100,7 +120,11 @@ export class InventoryService {
     if (from || to) {
       where.createdAt = {}
       if (from) where.createdAt.gte = new Date(from)
-      if (to) where.createdAt.lte = new Date(to)
+      if (to) {
+        const toDate = new Date(to)
+        toDate.setHours(23, 59, 59, 999)
+        where.createdAt.lte = toDate
+      }
     }
     if (medicineId) {
       where.batch = { medicineId }

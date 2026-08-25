@@ -3,15 +3,20 @@ import { toast } from 'sonner'
 import { HardDrive, RefreshCw } from 'lucide-react'
 import { api } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
-import Badge from '../../components/ui/Badge'
 
 interface Backup {
   id: number
   filename: string
-  size: number
+  size: number | null
   status: string
   createdAt: string
-  path: string
+  location: string | null
+}
+
+function statusBadge(status: string) {
+  if (status === 'SUCCESS') return { bg: '#E4F5EC', color: '#2F8F5F', label: 'Success' }
+  if (status === 'FAILED')  return { bg: '#FBE7E2', color: '#C1462F', label: 'Failed' }
+  return { bg: 'rgba(217,164,65,0.15)', color: 'var(--orange)', label: status }
 }
 
 function formatBytes(bytes: number) {
@@ -91,7 +96,9 @@ export default function BackupPage() {
               </div>
               <div>
                 <div style={labelSm}>Status</div>
-                <Badge label={lastBackup.status ?? 'COMPLETE'} variant="green" />
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: statusBadge(lastBackup.status).bg, color: statusBadge(lastBackup.status).color }}>
+                  {statusBadge(lastBackup.status).label}
+                </span>
               </div>
             </div>
           ) : (
@@ -119,6 +126,7 @@ export default function BackupPage() {
           {isLoading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : (
+            <div style={{ overflowX: 'auto' }}>
             <table className="tbl">
               <thead>
                 <tr>
@@ -135,7 +143,11 @@ export default function BackupPage() {
                     <tr key={b.id ?? b.filename}>
                       <td style={{ fontSize: 11, wordBreak: 'break-all', maxWidth: 240 }}>{b.filename}</td>
                       <td>{formatBytes(b.size ?? 0)}</td>
-                      <td><Badge label={b.status ?? 'COMPLETE'} variant="green" /></td>
+                      <td>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: statusBadge(b.status).bg, color: statusBadge(b.status).color }}>
+                          {statusBadge(b.status).label}
+                        </span>
+                      </td>
                       <td>{new Date(b.createdAt).toLocaleString()}</td>
                       <td>
                         <button
@@ -160,6 +172,7 @@ export default function BackupPage() {
                 )}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

@@ -7,6 +7,7 @@ export const ROUTE_ROLES: Record<string, AppRole[]> = {
   '/':           ['ADMIN', 'MANAGER'],
   '/pos':        ['ADMIN', 'MANAGER', 'CASHIER'],
   '/quotations': ['ADMIN', 'MANAGER', 'CASHIER'],
+  '/sales':      ['ADMIN', 'MANAGER', 'CASHIER'],
   '/medicines':  ['ADMIN', 'MANAGER', 'INVENTORY_STAFF'],
   '/purchases':  ['ADMIN', 'MANAGER', 'INVENTORY_STAFF'],
   '/inventory':  ['ADMIN', 'MANAGER', 'INVENTORY_STAFF'],

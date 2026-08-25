@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { PurchasesService } from './purchases.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
@@ -20,6 +20,8 @@ export class PurchasesController {
     @Query('supplierId') supplierId: string,
     @Query('from') from: string,
     @Query('to') to: string,
+    @Query('status') status: string,
+    @Query('search') search: string,
   ) {
     return this.purchases.findAll(
       Number(page) || 1,
@@ -27,12 +29,19 @@ export class PurchasesController {
       supplierId ? +supplierId : undefined,
       from,
       to,
+      status || undefined,
+      search || undefined,
     )
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.purchases.findOne(+id)
+  }
+
+  @Patch(':id/payment')
+  addPayment(@Param('id') id: string, @Body() body: { amount: number }) {
+    return this.purchases.addPayment(+id, Number(body.amount))
   }
 
   @Post(':id/return')

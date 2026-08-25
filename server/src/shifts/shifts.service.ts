@@ -26,13 +26,15 @@ export class ShiftsService {
     // Calculate live totals from sales in this shift
     const sales = await this.prisma.sale.findMany({
       where: { shiftId: shift.id, status: 'COMPLETED' },
-      select: { total: true, paymentMethod: true },
+      select: { total: true, paymentMethod: true, amountPaid: true },
     })
 
     const totalSales = sales.reduce((s, r) => s + Number(r.total), 0)
     const cashSales = sales.filter(r => r.paymentMethod === 'CASH').reduce((s, r) => s + Number(r.total), 0)
     const creditSales = sales.filter(r => r.paymentMethod === 'CREDIT').reduce((s, r) => s + Number(r.total), 0)
     const cardSales = sales.filter(r => r.paymentMethod === 'CARD').reduce((s, r) => s + Number(r.total), 0)
+    const splitCash = sales.filter(r => r.paymentMethod === 'SPLIT').reduce((s, r) => s + Number(r.amountPaid), 0)
+    const splitCredit = sales.filter(r => r.paymentMethod === 'SPLIT').reduce((s, r) => s + (Number(r.total) - Number(r.amountPaid)), 0)
 
     return {
       ...shift,
@@ -41,6 +43,8 @@ export class ShiftsService {
       cashSales,
       creditSales,
       cardSales,
+      splitCash,
+      splitCredit,
     }
   }
 
@@ -52,12 +56,13 @@ export class ShiftsService {
     // Calculate final totals
     const sales = await this.prisma.sale.findMany({
       where: { shiftId: id, status: 'COMPLETED' },
-      select: { total: true, paymentMethod: true },
+      select: { total: true, paymentMethod: true, amountPaid: true },
     })
 
     const totalSales = sales.reduce((s, r) => s + Number(r.total), 0)
     const cashSales = sales.filter(r => r.paymentMethod === 'CASH').reduce((s, r) => s + Number(r.total), 0)
     const creditSales = sales.filter(r => r.paymentMethod === 'CREDIT').reduce((s, r) => s + Number(r.total), 0)
+    const splitCash = sales.filter(r => r.paymentMethod === 'SPLIT').reduce((s, r) => s + Number(r.amountPaid), 0)
 
     const closed = await this.prisma.shift.update({
       where: { id },
@@ -80,6 +85,7 @@ export class ShiftsService {
       totalSales,
       cashSales,
       creditSales,
+      splitCash,
     }
   }
 

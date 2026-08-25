@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Edit, Key, Shield } from 'lucide-react'
+import { Plus, Edit, Key, Shield, Trash2 } from 'lucide-react'
 import { api, getApiError } from '../../api/client'
 import Table, { type Column } from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 
@@ -27,9 +28,10 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<AppUser | null>(null)
   const [resetUser, setResetUser] = useState<AppUser | null>(null)
   const [permUser, setPermUser] = useState<AppUser | null>(null)
+  const [deleteUser, setDeleteUser] = useState<AppUser | null>(null)
   const [newPwd, setNewPwd] = useState('')
   const [addForm, setAddForm] = useState({ username: '', fullName: '', password: '', role: 'CASHIER' })
-  const [editForm, setEditForm] = useState({ fullName: '', role: 'CASHIER' })
+  const [editForm, setEditForm] = useState({ fullName: '', role: 'CASHIER', isActive: true })
   const [perms, setPerms] = useState<Record<string, Record<string, boolean>>>({})
 
   const { data: users, isLoading } = useQuery({
@@ -64,6 +66,12 @@ export default function UsersPage() {
     onError: (err) => toast.error(getApiError(err)),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/users/${id}`).then(r => r.data),
+    onSuccess: () => { toast.success('User deleted'); setDeleteUser(null); qc.invalidateQueries({ queryKey: ['users'] }) },
+    onError: (err) => { toast.error(getApiError(err)); setDeleteUser(null) },
+  })
+
   const openPermModal = (user: AppUser) => {
     setPermUser(user)
     const initial: Record<string, Record<string, boolean>> = {}
@@ -93,9 +101,16 @@ export default function UsersPage() {
     { key: 'username', label: 'Username', render: r => <span className="mono" style={{ fontWeight: 600 }}>{r.username}</span> },
     { key: 'fullName', label: 'Full Name' },
     {
-      key: 'role', label: 'Role', render: r => (
-        <span className="badge badge-blue">{r.role}</span>
-      )
+      key: 'role', label: 'Role', render: r => {
+        const roleColor: Record<string, { bg: string; color: string }> = {
+          ADMIN: { bg: '#FBE7E2', color: '#C1462F' },
+          MANAGER: { bg: 'rgba(217,164,65,0.15)', color: 'var(--orange)' },
+          CASHIER: { bg: '#E4F5EC', color: '#2F8F5F' },
+          INVENTORY_STAFF: { bg: '#EDE9FE', color: '#7C3AED' },
+        }
+        const c = roleColor[r.role] ?? { bg: 'var(--paper)', color: 'var(--steel)' }
+        return <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: c.bg, color: c.color }}>{r.role}</span>
+      }
     },
     {
       key: 'isActive', label: 'Status', render: r => (
@@ -105,7 +120,7 @@ export default function UsersPage() {
     {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
-          <button onClick={() => { setEditUser(r); setEditForm({ fullName: r.fullName, role: r.role }) }}
+          <button onClick={() => { setEditUser(r); setEditForm({ fullName: r.fullName, role: r.role, isActive: r.isActive }) }}
             className="icon-btn success" title="Edit">
             <Edit size={14} />
           </button>
@@ -117,6 +132,12 @@ export default function UsersPage() {
             className="icon-btn" title="Permissions">
             <Shield size={14} />
           </button>
+          {r.role !== 'ADMIN' && (
+            <button onClick={() => setDeleteUser(r)}
+              className="icon-btn danger" title="Delete User">
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       )
     },
@@ -193,6 +214,25 @@ export default function UsersPage() {
             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 2px' }}>
+          <label style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 600, flex: 1 }}>Active</label>
+          <button
+            type="button"
+            onClick={() => setEditForm(p => ({ ...p, isActive: !p.isActive }))}
+            style={{
+              width: 40, height: 22, borderRadius: 99, border: 'none', cursor: 'pointer', position: 'relative',
+              background: editForm.isActive ? 'var(--green-ok)' : 'var(--steel)', transition: 'background 0.2s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3, left: editForm.isActive ? 20 : 3, width: 16, height: 16,
+              borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+            }} />
+          </button>
+          <span style={{ fontSize: 12, color: editForm.isActive ? 'var(--green-ok)' : 'var(--steel)', minWidth: 48 }}>
+            {editForm.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
       </Modal>
 
       {/* Reset Password */}
@@ -216,6 +256,16 @@ export default function UsersPage() {
           <input type="password" className="field-input" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min 8 characters" />
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteUser}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={() => deleteUser && deleteMutation.mutate(deleteUser.id)}
+        title="Delete User"
+        message={`Permanently delete "${deleteUser?.fullName}" (${deleteUser?.username})? This cannot be undone. Users with existing sales records cannot be deleted — deactivate them instead.`}
+        confirmLabel="Delete"
+        loading={deleteMutation.isPending}
+      />
 
       {/* Permissions Modal */}
       <Modal isOpen={!!permUser} onClose={() => setPermUser(null)} title={`Permissions — ${permUser?.fullName}`} size="lg"

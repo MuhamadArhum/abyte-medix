@@ -16,8 +16,21 @@ export class InventoryController {
     @Query('limit') limit: string,
     @Query('search') search: string,
     @Query('filter') filter: string,
+    @Query('expiryDays') expiryDays: string,
+    @Query('categoryId') categoryId: string,
+    @Query('manufacturerId') manufacturerId: string,
+    @Query('sort') sort: string,
   ) {
-    return this.inventory.getStock(Number(page) || 1, Number(limit) || 25, search ?? '', filter ?? '')
+    return this.inventory.getStock(
+      Number(page) || 1,
+      Number(limit) || 25,
+      search ?? '',
+      filter ?? '',
+      Number(expiryDays) || 90,
+      categoryId ? Number(categoryId) : undefined,
+      manufacturerId ? Number(manufacturerId) : undefined,
+      sort || 'name_asc',
+    )
   }
 
   @Get('movements')

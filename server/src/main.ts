@@ -3,6 +3,8 @@ import { ValidationPipe } from '@nestjs/common'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
 
+;(BigInt.prototype as any).toJSON = function () { return Number(this) }
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 

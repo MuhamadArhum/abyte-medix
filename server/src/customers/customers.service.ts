@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { PaymentType } from '@prisma/client'
 
 @Injectable()
 export class CustomersService {
@@ -9,7 +10,7 @@ export class CustomersService {
     return this.prisma.customer.create({ data: dto })
   }
 
-  async findAll(page = 1, limit = 50, search?: string) {
+  async findAll(page = 1, limit = 50, search?: string, isActive?: boolean, hasBalance?: boolean) {
     const skip = (page - 1) * limit
     const where: any = {}
     if (search) {
@@ -18,6 +19,9 @@ export class CustomersService {
         { phone: { contains: search } },
       ]
     }
+    if (isActive !== undefined) where.isActive = isActive
+    if (hasBalance === true) where.outstandingBalance = { gt: 0 }
+    if (hasBalance === false) where.outstandingBalance = { lte: 0 }
     const [data, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
       this.prisma.customer.count({ where }),
@@ -39,6 +43,36 @@ export class CustomersService {
   async deactivate(id: number) {
     await this.findOne(id)
     return this.prisma.customer.update({ where: { id }, data: { isActive: false } })
+  }
+
+  async reactivate(id: number) {
+    await this.findOne(id)
+    return this.prisma.customer.update({ where: { id }, data: { isActive: true } })
+  }
+
+  async receivePayment(customerId: number, dto: { amount: number; method?: string; reference?: string; notes?: string }) {
+    const customer = await this.findOne(customerId)
+    if (Number(dto.amount) <= 0) throw new BadRequestException('Amount must be positive')
+    if (Number(dto.amount) > Number(customer.outstandingBalance)) {
+      throw new BadRequestException(`Payment exceeds outstanding balance (Rs. ${Number(customer.outstandingBalance).toFixed(2)})`)
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.create({
+        data: {
+          type: PaymentType.CUSTOMER_RECEIPT,
+          amount: dto.amount,
+          method: dto.method ?? 'CASH',
+          reference: dto.reference,
+          notes: dto.notes,
+          customerId,
+        },
+      })
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { outstandingBalance: { decrement: Number(dto.amount) } },
+      })
+      return payment
+    })
   }
 
   async getLedger(id: number) {

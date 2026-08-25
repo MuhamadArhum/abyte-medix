@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
-// Default settings (document only — not auto-seeded):
-// invoice_prefix: "INV"
-// low_stock_threshold: "10"
-// expiry_alert_days: "90"
-// store_name: "My Medical Store"
-// currency: "Rs."
-// backup_path: "./backups/"
+const DEFAULTS: Record<string, string> = {
+  store_name: 'My Medical Store',
+  store_address: '',
+  store_phone: '',
+  store_logo: '',
+  invoice_prefix: 'INV',
+  currency: 'Rs.',
+  low_stock_threshold: '10',
+  expiry_alert_days: '90',
+  backup_path: './backups/',
+}
 
 @Injectable()
 export class SettingsService {
@@ -15,10 +19,11 @@ export class SettingsService {
 
   async getAll(): Promise<Record<string, string>> {
     const settings = await this.prisma.setting.findMany()
-    return settings.reduce<Record<string, string>>((acc, s) => {
+    const saved = settings.reduce<Record<string, string>>((acc, s) => {
       acc[s.key] = s.value
       return acc
     }, {})
+    return { ...DEFAULTS, ...saved }
   }
 
   async get(key: string, defaultValue?: string): Promise<string | undefined> {

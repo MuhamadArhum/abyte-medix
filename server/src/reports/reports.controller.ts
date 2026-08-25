@@ -66,4 +66,11 @@ export class ReportsController {
   ) {
     return this.reports.inventoryMovements(from, to, type)
   }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('profit-loss')
+  profitLoss(@Query('from') from: string, @Query('to') to: string) {
+    return this.reports.profitLoss(from, to)
+  }
 }

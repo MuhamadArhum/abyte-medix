@@ -19,6 +19,7 @@ import AuditPage from './pages/audit/AuditPage'
 import BackupPage from './pages/backup/BackupPage'
 import LicensePage from './pages/license/LicensePage'
 import QuotationsPage from './pages/quotations/QuotationsPage'
+import SalesPage from './pages/sales/SalesPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
@@ -56,6 +57,7 @@ export default function App() {
           <Route index element={<RoleRoute path="/"><DashboardPage /></RoleRoute>} />
           <Route path="pos" element={<RoleRoute path="/pos"><POSPage /></RoleRoute>} />
           <Route path="quotations" element={<RoleRoute path="/quotations"><QuotationsPage /></RoleRoute>} />
+          <Route path="sales" element={<RoleRoute path="/sales"><SalesPage /></RoleRoute>} />
           <Route path="medicines" element={<RoleRoute path="/medicines"><MedicinesPage /></RoleRoute>} />
           <Route path="purchases" element={<RoleRoute path="/purchases"><PurchasesPage /></RoleRoute>} />
           <Route path="inventory" element={<RoleRoute path="/inventory"><InventoryPage /></RoleRoute>} />

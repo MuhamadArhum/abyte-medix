@@ -44,9 +44,9 @@ export class AuditService {
     if (from || to) {
       where.createdAt = {}
       if (from) where.createdAt.gte = new Date(from)
-      if (to) where.createdAt.lte = new Date(to)
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d }
     }
-    return this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.auditLog.findMany({
         where,
         include: { user: { select: { fullName: true, username: true } } },
@@ -56,5 +56,6 @@ export class AuditService {
       }),
       this.prisma.auditLog.count({ where }),
     ])
+    return { data, total }
   }
 }

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { PaymentType } from '@prisma/client'
 
 @Injectable()
 export class SuppliersService {
@@ -9,7 +10,7 @@ export class SuppliersService {
     return this.prisma.supplier.create({ data: dto })
   }
 
-  async findAll(page = 1, limit = 50, search?: string) {
+  async findAll(page = 1, limit = 50, search?: string, isActive?: boolean, hasPayable?: boolean) {
     const skip = (page - 1) * limit
     const where: any = {}
     if (search) {
@@ -18,6 +19,9 @@ export class SuppliersService {
         { phone: { contains: search } },
       ]
     }
+    if (isActive !== undefined) where.isActive = isActive
+    if (hasPayable === true) where.payableBalance = { gt: 0 }
+    if (hasPayable === false) where.payableBalance = { lte: 0 }
     const [data, total] = await this.prisma.$transaction([
       this.prisma.supplier.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
       this.prisma.supplier.count({ where }),
@@ -39,6 +43,36 @@ export class SuppliersService {
   async deactivate(id: number) {
     await this.findOne(id)
     return this.prisma.supplier.update({ where: { id }, data: { isActive: false } })
+  }
+
+  async reactivate(id: number) {
+    await this.findOne(id)
+    return this.prisma.supplier.update({ where: { id }, data: { isActive: true } })
+  }
+
+  async makePayment(supplierId: number, dto: { amount: number; method?: string; reference?: string; notes?: string }) {
+    const supplier = await this.findOne(supplierId)
+    if (Number(dto.amount) <= 0) throw new BadRequestException('Amount must be positive')
+    if (Number(dto.amount) > Number(supplier.payableBalance)) {
+      throw new BadRequestException(`Payment exceeds payable balance (Rs. ${Number(supplier.payableBalance).toFixed(2)})`)
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.create({
+        data: {
+          type: PaymentType.SUPPLIER_PAYMENT,
+          amount: dto.amount,
+          method: dto.method ?? 'CASH',
+          reference: dto.reference,
+          notes: dto.notes,
+          supplierId,
+        },
+      })
+      await tx.supplier.update({
+        where: { id: supplierId },
+        data: { payableBalance: { decrement: Number(dto.amount) } },
+      })
+      return payment
+    })
   }
 
   async getLedger(id: number) {

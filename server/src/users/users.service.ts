@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common'
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { Role } from '@prisma/client'
@@ -18,6 +18,10 @@ export class UsersService {
     role: Role
     allowedTerminals?: string
   }, actorId?: number) {
+    if (!dto.username?.trim()) throw new BadRequestException('Username is required')
+    if (!dto.fullName?.trim()) throw new BadRequestException('Full name is required')
+    if (!dto.password || dto.password.length < 6) throw new BadRequestException('Password must be at least 6 characters')
+
     const exists = await this.prisma.user.findUnique({ where: { username: dto.username } })
     if (exists) throw new ConflictException('Username already taken')
 
@@ -39,7 +43,7 @@ export class UsersService {
 
   findAll() {
     return this.prisma.user.findMany({
-      select: { id: true, username: true, fullName: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, username: true, fullName: true, role: true, isActive: true, createdAt: true, permissions: true },
       orderBy: { createdAt: 'desc' },
     })
   }
@@ -66,11 +70,29 @@ export class UsersService {
   }
 
   async resetPassword(id: number, newPassword: string, actorId?: number) {
+    if (!newPassword || newPassword.length < 6) throw new BadRequestException('Password must be at least 6 characters')
     await this.findOne(id)
     const passwordHash = await bcrypt.hash(newPassword, 12)
     await this.prisma.user.update({ where: { id }, data: { passwordHash } })
     await this.audit.log({ userId: actorId, module: 'Users', action: 'RESET_PASSWORD', recordId: id })
     return { message: 'Password reset successfully' }
+  }
+
+  async delete(id: number, actorId?: number) {
+    const user = await this.findOne(id)
+    if (actorId === id) throw new BadRequestException('Cannot delete your own account')
+    if (user.role === Role.ADMIN) throw new BadRequestException('Admin users cannot be deleted')
+
+    const salesCount = await this.prisma.sale.count({ where: { userId: id } })
+    if (salesCount > 0) throw new BadRequestException(`Cannot delete user with ${salesCount} sales record(s). Deactivate instead.`)
+
+    await this.prisma.$transaction([
+      this.prisma.userPermission.deleteMany({ where: { userId: id } }),
+      this.prisma.refreshToken.deleteMany({ where: { userId: id } }),
+      this.prisma.user.delete({ where: { id } }),
+    ])
+    await this.audit.log({ userId: actorId, module: 'Users', action: 'DELETE_USER', recordId: id, oldValue: { username: user.username, role: user.role } })
+    return { message: 'User deleted' }
   }
 
   async setPermissions(userId: number, permissions: { module: string; action: string; granted: boolean }[], actorId?: number) {
