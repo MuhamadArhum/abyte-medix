@@ -1,7 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { PrismaService } from '../prisma/prisma.service'
+import { CreateManufacturerDto } from './dto/create-manufacturer.dto'
 
+@ApiTags('Manufacturers')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('manufacturers')
 export class ManufacturersController {
@@ -13,8 +17,8 @@ export class ManufacturersController {
   }
 
   @Post()
-  create(@Body() body: { name: string }) {
-    return this.prisma.manufacturer.create({ data: { name: body.name } })
+  create(@Body() dto: CreateManufacturerDto) {
+    return this.prisma.manufacturer.create({ data: { name: dto.name } })
   }
 
   @Delete(':id')

@@ -1,31 +1,41 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common'
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { CurrentUser } from './decorators/current-user.decorator'
+import { LoginDto } from './dto/login.dto'
+import { RefreshTokenDto } from './dto/refresh-token.dto'
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private auth: AuthService) {}
 
+  @ApiOperation({ summary: 'Login and receive JWT tokens' })
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('login')
-  login(@Body() body: { username: string; password: string }) {
-    return this.auth.login(body.username, body.password)
+  login(@Body() dto: LoginDto) {
+    return this.auth.login(dto.username, dto.password)
   }
 
+  @ApiOperation({ summary: 'Refresh access token' })
   @Post('refresh')
-  refresh(@Body() body: { refreshToken: string }) {
-    return this.auth.refresh(body.refreshToken)
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.auth.refresh(dto.refreshToken)
   }
 
+  @ApiOperation({ summary: 'Logout and revoke refresh token' })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout(@Body() body: { refreshToken: string }) {
-    return this.auth.logout(body.refreshToken)
+  logout(@Body() dto: RefreshTokenDto) {
+    return this.auth.logout(dto.refreshToken)
   }
 
+  @ApiOperation({ summary: 'Get current logged-in user info' })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('me')
   me(@CurrentUser() user: any) {

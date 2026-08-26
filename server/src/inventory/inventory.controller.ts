@@ -1,15 +1,20 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger'
 import { InventoryService } from './inventory.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
 import { Role } from '@prisma/client'
+import { AdjustmentDto } from './dto/adjustment.dto'
 
+@ApiTags('Inventory')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('inventory')
 export class InventoryController {
   constructor(private inventory: InventoryService) {}
 
+  @ApiOperation({ summary: 'Get current stock levels (paginated + filtered)' })
   @Get()
   getStock(
     @Query('page') page: string,
@@ -33,6 +38,7 @@ export class InventoryController {
     )
   }
 
+  @ApiOperation({ summary: 'Get stock movement history' })
   @Get('movements')
   getMovements(
     @Query('page') page: string,
@@ -54,13 +60,15 @@ export class InventoryController {
     )
   }
 
+  @ApiOperation({ summary: 'Adjust stock (damage, write-off, manual correction)' })
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER)
   @Post('adjustment')
-  adjustment(@Body() body: any) {
-    return this.inventory.adjustment(body)
+  adjustment(@Body() dto: AdjustmentDto) {
+    return this.inventory.adjustment(dto)
   }
 
+  @ApiOperation({ summary: 'Get batches for a specific medicine' })
   @Get('batches/:medicineId')
   getBatches(@Param('medicineId') medicineId: string) {
     return this.inventory.getBatchesByMedicine(+medicineId)
