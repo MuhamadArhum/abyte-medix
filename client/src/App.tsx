@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from './store/auth.store'
 import { ROUTE_ROLES, canRole } from './config/rbac'
+import { api } from './api/client'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/auth/LoginPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
@@ -23,7 +25,41 @@ import SalesPage from './pages/sales/SalesPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+  const user = useAuthStore((s) => s.user)
+  const location = useLocation()
+
+  const { data: licenseStatus } = useQuery({
+    queryKey: ['license-status'],
+    queryFn: () => api.get('/license/status').then(r => r.data),
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+
+  const licenseInvalid = licenseStatus && licenseStatus.valid === false
+  const isAdmin = user?.role === 'ADMIN'
+  const onLicensePage = location.pathname === '/license'
+
+  // Admin can always access /license page to fix it
+  if (licenseInvalid && isAdmin && !onLicensePage) return <Navigate to="/license" replace />
+
+  // Non-admin sees a blocked screen
+  if (licenseInvalid && !isAdmin) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: '#1B1E21', flexDirection: 'column', gap: 12,
+      }}>
+        <div style={{ fontSize: 48 }}>🔒</div>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>License Expired or Invalid</div>
+        <div style={{ color: '#75797D', fontSize: 13 }}>Please contact your system administrator.</div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
 }
 
 // Blocks URL-manipulation access — redirects to first allowed page for the role

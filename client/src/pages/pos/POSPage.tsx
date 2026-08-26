@@ -249,8 +249,12 @@ export default function POSPage() {
         setCart(items)
         if (q.customer) setCustomer(q.customer)
         toast.success(`Quotation ${q.invoiceNumber} loaded into cart`)
+      } else {
+        toast.error('Quotation had no valid items')
       }
-    } catch {}
+    } catch {
+      toast.error('Failed to load quotation — data was corrupted')
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

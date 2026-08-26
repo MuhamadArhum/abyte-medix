@@ -7,9 +7,18 @@ import * as fs from 'fs'
 
 const execAsync = promisify(exec)
 
-// Common mysqldump locations on Windows
+// Common mysqldump locations on Windows (MySQL + MariaDB)
 const MYSQLDUMP_PATHS = [
   'mysqldump',
+  // MariaDB
+  'C:\\Program Files\\MariaDB 12.3\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MariaDB 12.2\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MariaDB 12.1\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MariaDB 11.4\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MariaDB 11.2\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MariaDB 10.11\\bin\\mysqldump.exe',
+  'C:\\Program Files\\MariaDB 10.6\\bin\\mysqldump.exe',
+  // MySQL
   'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe',
   'C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\mysqldump.exe',
   'C:\\Program Files\\MySQL\\MySQL Server 5.7\\bin\\mysqldump.exe',
@@ -22,8 +31,10 @@ const MYSQLDUMP_PATHS = [
 export class BackupService {
   constructor(private prisma: PrismaService) {}
 
-  private getBackupDir(): string {
-    const dir = path.resolve(process.cwd(), 'backups')
+  private async getBackupDir(): Promise<string> {
+    const setting = await this.prisma.setting.findUnique({ where: { key: 'backup_path' } })
+    const customPath = setting?.value?.trim()
+    const dir = customPath ? path.resolve(customPath) : path.resolve(process.cwd(), 'backups')
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     return dir
   }
@@ -54,8 +65,9 @@ export class BackupService {
       }
     }
     throw new BadRequestException(
-      'mysqldump not found. Install MySQL client tools and ensure mysqldump is in your PATH, ' +
-      'or install MySQL Server (includes mysqldump at C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\).'
+      'mysqldump not found. Make sure MySQL or MariaDB is installed. ' +
+      'Expected at: C:\\Program Files\\MariaDB 12.x\\bin\\mysqldump.exe or C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe. ' +
+      'You can also add mysqldump to your system PATH.'
     )
   }
 
@@ -63,7 +75,7 @@ export class BackupService {
     const { user, pass, host, port, name } = this.parseDbUrl()
     if (!name) throw new BadRequestException('Could not determine database name from DATABASE_URL')
 
-    const backupDir = this.getBackupDir()
+    const backupDir = await this.getBackupDir()
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const filename = `backup-${timestamp}.sql`
     const filePath = path.join(backupDir, filename)

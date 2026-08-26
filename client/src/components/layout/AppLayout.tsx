@@ -34,7 +34,7 @@ export default function AppLayout() {
 
   const handleLogout = async () => {
     const refreshToken = useAuthStore.getState().refreshToken
-    try { await api.post('/auth/logout', { refreshToken }) } catch {}
+    try { await api.post('/auth/logout', { refreshToken }) } catch { /* server logout failed — proceed with local logout */ }
     logout()
     navigate('/login', { replace: true })
   }

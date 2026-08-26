@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { AuditService } from '../audit/audit.service'
 import { MovementType, PurchaseStatus } from '@prisma/client'
 
 @Injectable()
 export class PurchasesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   private async generateInvoiceNumber(): Promise<string> {
     const today = new Date()
@@ -114,7 +118,20 @@ export class PurchasesService {
         })
       }
 
-      // TODO: audit log
+      await this.audit.log({
+        userId: dto.userId,
+        module: 'Purchases',
+        action: 'CREATE_PURCHASE',
+        recordId: purchase.id,
+        newValue: {
+          invoiceNumber: purchase.invoiceNumber,
+          supplierId: purchase.supplierId,
+          total: Number(purchase.total),
+          amountPaid: Number(purchase.amountPaid),
+          status: purchase.status,
+          itemCount: purchase.items.length,
+        },
+      })
       return purchase
     })
   }
@@ -239,7 +256,19 @@ export class PurchasesService {
         data: { payableBalance: { decrement: Number(dto.totalAmount) } },
       })
 
-      // TODO: audit log
+      await this.audit.log({
+        userId: dto.userId,
+        module: 'Purchases',
+        action: 'CREATE_PURCHASE_RETURN',
+        recordId: purchaseReturn.id,
+        newValue: {
+          purchaseId,
+          supplierId: purchase.supplierId,
+          totalAmount: Number(dto.totalAmount),
+          reason: dto.reason,
+          itemCount: dto.items.length,
+        },
+      })
       return purchaseReturn
     })
   }
