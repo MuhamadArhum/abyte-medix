@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Search, ShoppingCart, X,
+  Search, X,
   Receipt, RotateCcw, CheckCircle2, Printer, User,
   Barcode, Hash, Pill as PillIcon, Keyboard,
 } from 'lucide-react'
@@ -945,13 +945,6 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
           )}
         </div>
 
-        {/* Item count badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
-          <ShoppingCart size={15} color={C.primary} />
-          <span style={{ fontSize: 12, background: 'rgba(217,164,65,0.15)', color: C.primary, padding: '2px 10px', borderRadius: 999, fontWeight: 700 }}>
-            {cart.reduce((s, i) => s + i.qty, 0)} items
-          </span>
-        </div>
       </div>{/* end top bar */}
 
       {/* ── MIDDLE: Cart Table + Payment Panel ── */}

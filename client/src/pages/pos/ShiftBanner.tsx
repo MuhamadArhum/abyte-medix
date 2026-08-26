@@ -92,14 +92,6 @@ export default function ShiftBanner({ onShiftChange }: { onShiftChange?: () => v
             <span style={{ color: '#75797D' }}>since {fmtTime(shift.openedAt)}</span>
             <span style={{ color: '#75797D' }}>· {shift.openedBy.fullName}</span>
           </div>
-          <div style={{ height: 14, width: 1, background: '#D9D4C6' }} />
-          <div style={{ display: 'flex', gap: 16 }}>
-            <span style={{ color: '#75797D' }}>Sales: <b style={{ color: '#17181A', ...MONO }}>{shift.saleCount}</b></span>
-            <span style={{ color: '#75797D' }}>Cash: <b style={{ color: '#3E8E5A', ...MONO }}>{fmtRs(shift.cashSales)}</b></span>
-            {(shift.splitCash ?? 0) > 0 && <span style={{ color: '#75797D' }}>Split: <b style={{ color: '#7C3AED', ...MONO }}>{fmtRs(shift.splitCash ?? 0)}</b></span>}
-            <span style={{ color: '#75797D' }}>Credit: <b style={{ color: '#C23B2E', ...MONO }}>{fmtRs(shift.creditSales)}</b></span>
-            <span style={{ color: '#75797D' }}>Total: <b style={{ color: '#D9A441', ...MONO }}>{fmtRs(shift.totalSales)}</b></span>
-          </div>
           <div style={{ marginLeft: 'auto' }}>
             <button
               onClick={() => { setClosingBalance(''); setShowCloseModal(true) }}
