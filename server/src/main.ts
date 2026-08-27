@@ -8,6 +8,12 @@ import { DbInitService } from './db-init.service'
 ;(BigInt.prototype as any).toJSON = function () { return Number(this) }
 
 async function bootstrap() {
+  const dbUrl = process.env.DATABASE_URL ?? ''
+
+  // Init DB (create tables + admin) BEFORE starting NestJS
+  const dbInit = new DbInitService()
+  await dbInit.initDb(dbUrl)
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
   app.enableCors({ origin: true, credentials: true })
@@ -25,10 +31,6 @@ async function bootstrap() {
     .addBearerAuth()
     .build()
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config))
-
-  // Auto-create tables and default admin on first run
-  const dbInit = app.get(DbInitService)
-  await dbInit.initDb()
 
   const port = process.env.PORT ?? 5000
   await app.listen(port, '0.0.0.0')

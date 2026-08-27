@@ -76,8 +76,8 @@ function startServer(dbUrl: string): Promise<void> {
       console.log('[Server] exited with code', code)
     })
 
-    // Open app after 8 seconds regardless
-    setTimeout(resolve, 8000)
+    // Open app after 30 seconds regardless
+    setTimeout(resolve, 30000)
   })
 }
 
