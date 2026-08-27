@@ -345,7 +345,10 @@ export class DbInitService {
 
     let conn: mariadb.Connection | null = null
     try {
-      conn = await mariadb.createConnection({ host, port, user, password, database })
+      // Connect without a database first so we can create it if it doesn't exist
+      conn = await mariadb.createConnection({ host, port, user, password, connectTimeout: 10000 })
+      await conn.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`)
+      await conn.query(`USE \`${database}\``)
 
       for (const sql of TABLES) {
         try {

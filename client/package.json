@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "electron:dev": "vite",
-    "electron:build": "cd ../server && npm run build && cd ../client && tsc -b && vite build && electron-builder",
+    "electron:build": "node scripts/setup-mariadb.js && cd ../server && npm run build && cd ../client && tsc -b && vite build && electron-builder",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -26,6 +26,11 @@
       {
         "from": "server-bundle",
         "to": "server-bundle",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "mariadb-bin",
+        "to": "mariadb-bin",
         "filter": ["**/*"]
       }
     ],

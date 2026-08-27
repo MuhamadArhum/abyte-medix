@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Monitor, Network, ChevronRight, Database, Loader2 } from 'lucide-react'
+import { Monitor, Network, ChevronRight, CheckCircle, Loader2 } from 'lucide-react'
 
 type Mode = 'single' | 'lan'
 type Step = 'choose' | 'configure'
@@ -11,6 +11,7 @@ const C = {
   text: '#17181A',
   sub: '#75797D',
   danger: '#C23B2E',
+  green: '#3E8E5A',
 }
 
 const inp: React.CSSProperties = {
@@ -22,11 +23,6 @@ const inp: React.CSSProperties = {
 export default function SetupPage() {
   const [step, setStep] = useState<Step>('choose')
   const [mode, setMode] = useState<Mode>('single')
-  const [dbHost, setDbHost] = useState('localhost')
-  const [dbPort, setDbPort] = useState('3306')
-  const [dbUser, setDbUser] = useState('root')
-  const [dbPass, setDbPass] = useState('12345')
-  const [dbName, setDbName] = useState('abyte_medix')
   const [serverIp, setServerIp] = useState('')
   const [serverPort, setServerPort] = useState('3002')
   const [saving, setSaving] = useState(false)
@@ -36,26 +32,21 @@ export default function SetupPage() {
 
   async function handleSave() {
     setError('')
+
+    if (mode === 'lan' && !serverIp.trim()) {
+      setError('Server IP address is required')
+      return
+    }
+
     setSaving(true)
     try {
       const serverUrl = mode === 'single'
-        ? `http://localhost:3002/api`
+        ? 'http://localhost:3002/api'
         : `http://${serverIp.trim()}:${serverPort}/api`
 
-      const dbUrl = mode === 'single'
-        ? `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`
-        : undefined
-
-      if (mode === 'lan' && !serverIp.trim()) {
-        setError('Server IP address is required')
-        setSaving(false)
-        return
-      }
-
       if (eAPI?.restartWithConfig) {
-        await eAPI.restartWithConfig({ mode, serverUrl, dbUrl })
+        await eAPI.restartWithConfig({ mode, serverUrl })
       } else {
-        // Dev fallback — just reload
         localStorage.setItem('abyte_config', JSON.stringify({ mode, serverUrl }))
         window.location.hash = '/login'
       }
@@ -78,7 +69,6 @@ export default function SetupPage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 460 }}>
 
-          {/* Single User Card */}
           <button
             onClick={() => { setMode('single'); setStep('configure') }}
             style={{
@@ -93,14 +83,13 @@ export default function SetupPage() {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Single PC Setup</div>
               <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>
-                Server and client on the same computer.<br />
+                Everything runs on this computer — no installation needed.<br />
                 <span style={{ color: C.primary, fontWeight: 600 }}>Recommended for most pharmacies.</span>
               </div>
             </div>
             <ChevronRight size={18} color={C.sub} />
           </button>
 
-          {/* LAN / Multi-user Card */}
           <button
             onClick={() => { setMode('lan'); setStep('configure') }}
             style={{
@@ -110,7 +99,7 @@ export default function SetupPage() {
             }}
           >
             <div style={{ width: 44, height: 44, borderRadius: 10, background: '#E8F4ED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Network size={22} color="#3E8E5A" />
+              <Network size={22} color={C.green} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Connect to Server (LAN)</div>
@@ -142,47 +131,31 @@ export default function SetupPage() {
         </button>
 
         <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>
-          {mode === 'single' ? 'Database Configuration' : 'Server Connection'}
+          {mode === 'single' ? 'Ready to Launch' : 'Server Connection'}
         </div>
         <div style={{ fontSize: 12, color: C.sub, marginBottom: 24 }}>
           {mode === 'single'
-            ? 'Configure the MySQL/MariaDB database connection'
-            : 'Enter the IP address of the server PC'}
+            ? 'Database is included — no additional setup required'
+            : 'Enter the IP address of the server PC on your network'}
         </div>
 
         <div style={{ background: '#fff', borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {mode === 'single' ? (
-            <>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <Label>Host</Label>
-                  <input style={inp} value={dbHost} onChange={e => setDbHost(e.target.value)} placeholder="localhost" />
-                </div>
-                <div style={{ width: 90 }}>
-                  <Label>Port</Label>
-                  <input style={inp} value={dbPort} onChange={e => setDbPort(e.target.value)} placeholder="3306" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#F0FAF4', borderRadius: 8, border: '1px solid #C6E8D3' }}>
+                <CheckCircle size={16} color={C.green} style={{ marginTop: 1, flexShrink: 0 }} />
+                <div style={{ fontSize: 12, color: '#2D6A45' }}>
+                  <b>Database included</b> — MariaDB will start automatically with the app. No XAMPP or MySQL installation required.
                 </div>
               </div>
-              <div>
-                <Label>Database Name</Label>
-                <input style={inp} value={dbName} onChange={e => setDbName(e.target.value)} placeholder="abyte_medix" />
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <Label>Username</Label>
-                  <input style={inp} value={dbUser} onChange={e => setDbUser(e.target.value)} placeholder="root" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <Label>Password</Label>
-                  <input style={inp} type="password" value={dbPass} onChange={e => setDbPass(e.target.value)} placeholder="••••••" />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#F0FAF4', borderRadius: 8, border: '1px solid #C6E8D3' }}>
+                <CheckCircle size={16} color={C.green} style={{ marginTop: 1, flexShrink: 0 }} />
+                <div style={{ fontSize: 12, color: '#2D6A45' }}>
+                  <b>Default login:</b> username <code>admin</code>, password <code>admin123</code>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: C.sub, background: C.bg, borderRadius: 8, padding: '8px 12px' }}>
-                <Database size={12} style={{ display: 'inline', marginRight: 4 }} />
-                MySQL / MariaDB must be installed and running. The database <b>{dbName}</b> will be created automatically on first run.
-              </div>
-            </>
+            </div>
           ) : (
             <>
               <div>
@@ -215,7 +188,10 @@ export default function SetupPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            {saving ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Starting…</> : 'Save & Launch'}
+            {saving
+              ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Starting…</>
+              : mode === 'single' ? 'Launch AbyteMedix' : 'Connect & Launch'
+            }
           </button>
         </div>
       </div>

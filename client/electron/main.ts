@@ -2,6 +2,9 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { utilityProcess } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import net from 'net'
+import { spawn } from 'child_process'
+import type { ChildProcess } from 'child_process'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -11,10 +14,12 @@ const isDev = process.env.NODE_ENV === 'development'
 interface AppConfig {
   mode: 'single' | 'lan'
   serverUrl: string
-  dbUrl?: string
 }
 
 const configPath = path.join(app.getPath('userData'), 'config.json')
+
+const MARIADB_PORT = 3307
+const BUNDLED_DB_URL = `mysql://root:@127.0.0.1:${MARIADB_PORT}/abyte_medix`
 
 function readConfig(): AppConfig | null {
   try {
@@ -31,15 +36,110 @@ function writeConfig(cfg: AppConfig) {
 
 let globalServerUrl = 'http://localhost:3002/api'
 let serverProc: Electron.UtilityProcess | null = null
+let mariadbProc: ChildProcess | null = null
+
+function getMariaDbDir(): string {
+  if (isDev) {
+    return path.join(app.getAppPath(), 'mariadb-bin')
+  }
+  return path.join(process.resourcesPath, 'mariadb-bin')
+}
+
+function getDataDir(): string {
+  return path.join(app.getPath('userData'), 'mariadb-data')
+}
+
+function waitForPort(port: number, timeout = 90000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const deadline = Date.now() + timeout
+    function attempt() {
+      const sock = net.createConnection(port, '127.0.0.1')
+      sock.setTimeout(1000)
+      sock.on('connect', () => { sock.destroy(); resolve() })
+      sock.on('error', () => {
+        sock.destroy()
+        if (Date.now() >= deadline) reject(new Error(`Port ${port} did not open within ${timeout / 1000}s`))
+        else setTimeout(attempt, 500)
+      })
+      sock.on('timeout', () => {
+        sock.destroy()
+        if (Date.now() >= deadline) reject(new Error(`Port ${port} connection timed out`))
+        else setTimeout(attempt, 500)
+      })
+    }
+    attempt()
+  })
+}
+
+async function startMariaDb(): Promise<void> {
+  const mariadbDir = getMariaDbDir()
+  const mysqldPath = path.join(mariadbDir, 'bin', 'mysqld.exe')
+  const dataDir = getDataDir()
+
+  if (!fs.existsSync(mysqldPath)) {
+    throw new Error('MariaDB binary not found: ' + mysqldPath)
+  }
+
+  // First-run: initialize data directory (insecure = no root password)
+  if (!fs.existsSync(path.join(dataDir, 'mysql'))) {
+    console.log('[MariaDB] First run — initializing data directory...')
+    fs.mkdirSync(dataDir, { recursive: true })
+
+    await new Promise<void>((resolve, reject) => {
+      const init = spawn(mysqldPath, [
+        '--initialize-insecure',
+        `--datadir=${dataDir}`,
+        `--basedir=${mariadbDir}`,
+      ], { stdio: 'pipe' })
+
+      init.stderr?.on('data', (d: Buffer) => {
+        const msg = d.toString().trim()
+        if (msg) console.log('[MariaDB init]', msg)
+      })
+      init.on('error', reject)
+      init.on('close', () => {
+        if (fs.existsSync(path.join(dataDir, 'mysql'))) resolve()
+        else reject(new Error('MariaDB initialization failed — mysql system dir not created'))
+      })
+    })
+
+    console.log('[MariaDB] Data directory initialized successfully')
+  }
+
+  // Start the server
+  console.log(`[MariaDB] Starting on port ${MARIADB_PORT}...`)
+  mariadbProc = spawn(mysqldPath, [
+    `--datadir=${dataDir}`,
+    `--basedir=${mariadbDir}`,
+    `--port=${MARIADB_PORT}`,
+    '--bind-address=127.0.0.1',
+    '--console',
+  ], { stdio: 'pipe' })
+
+  mariadbProc.stdout?.on('data', (d: Buffer) => {
+    const msg = d.toString().trim()
+    if (msg) console.log('[MariaDB]', msg)
+  })
+  mariadbProc.stderr?.on('data', (d: Buffer) => {
+    const msg = d.toString().trim()
+    if (msg) console.log('[MariaDB]', msg)
+  })
+  mariadbProc.on('exit', (code) => {
+    console.log('[MariaDB] Process exited with code', code)
+  })
+
+  await waitForPort(MARIADB_PORT, 90000)
+  console.log('[MariaDB] Ready!')
+}
 
 function getServerBundlePath(): string {
   if (isDev) {
-    return path.join(__dirname, '../../client/server-bundle/server.cjs')
+    return path.join(__dirname, '../server-bundle/server.cjs')
   }
   return path.join(process.resourcesPath, 'server-bundle', 'server.cjs')
 }
 
-function startServer(dbUrl: string): Promise<void> {
+function startServer(): Promise<void> {
   return new Promise((resolve) => {
     const bundlePath = getServerBundlePath()
     if (!fs.existsSync(bundlePath)) {
@@ -52,7 +152,7 @@ function startServer(dbUrl: string): Promise<void> {
       env: {
         ...process.env,
         NODE_ENV: 'production',
-        DATABASE_URL: dbUrl,
+        DATABASE_URL: BUNDLED_DB_URL,
         PORT: '3002',
         JWT_SECRET: 'abyte-medix-jwt-secret-2025',
         JWT_EXPIRES_IN: '15m',
@@ -65,19 +165,20 @@ function startServer(dbUrl: string): Promise<void> {
 
     serverProc.stdout?.on('data', (data: Buffer) => {
       const msg = data.toString()
+      console.log('[Server]', msg.trim())
       if (msg.includes('running on') || msg.includes(':3002')) resolve()
     })
 
     serverProc.stderr?.on('data', (data: Buffer) => {
-      console.error('[Server]', data.toString())
+      console.error('[Server]', data.toString().trim())
     })
 
     serverProc.on('exit', (code) => {
-      console.log('[Server] exited with code', code)
+      console.log('[Server] Exited with code', code)
     })
 
-    // Open app after 30 seconds regardless
-    setTimeout(resolve, 30000)
+    // Fallback: open app after 45 seconds regardless
+    setTimeout(resolve, 45000)
   })
 }
 
@@ -129,6 +230,7 @@ async function bootstrap() {
   const config = readConfig()
 
   if (!config) {
+    // First run: show setup wizard
     createWindow('/setup')
     return
   }
@@ -136,8 +238,12 @@ async function bootstrap() {
   globalServerUrl = config.serverUrl
 
   if (config.mode === 'single') {
-    const dbUrl = config.dbUrl ?? 'mysql://root:12345@localhost:3306/abyte_medix'
-    await startServer(dbUrl)
+    try {
+      await startMariaDb()
+    } catch (e: any) {
+      console.error('[MariaDB] Failed to start:', e.message)
+    }
+    await startServer()
   }
 
   createWindow()
@@ -147,6 +253,7 @@ app.whenReady().then(bootstrap)
 
 app.on('window-all-closed', () => {
   serverProc?.kill()
+  mariadbProc?.kill()
   if (process.platform !== 'darwin') app.quit()
 })
 
