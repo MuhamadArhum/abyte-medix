@@ -152,12 +152,6 @@ export default function InventoryPage() {
   const inventoryData: InventoryItem[] = invData?.data ?? []
   const invTotal: number = invData?.total ?? 0
 
-  const movTypeColor = (type: string) => {
-    if (['SALE', 'ADJUSTMENT_OUT', 'DAMAGE', 'EXPIRY_WRITEOFF'].includes(type)) return 'text-red-600'
-    if (['PURCHASE', 'ADJUSTMENT_IN', 'RETURN_IN'].includes(type)) return 'text-green-600'
-    return 'text-gray-700'
-  }
-
   const movColumns: Column<Movement>[] = [
     { key: 'createdAt', label: 'Date', render: r => <span style={{ fontSize: 12, color: 'var(--steel)' }}>{new Date(r.createdAt).toLocaleString()}</span> },
     { key: 'batch', label: 'Medicine', render: r => <span style={{ fontWeight: 600 }}>{r.batch?.medicine?.brandName} <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 400, fontSize: 11, color: 'var(--steel)' }}>({r.batch?.batchNumber})</span></span> },

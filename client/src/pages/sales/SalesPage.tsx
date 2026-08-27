@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Eye, X, RotateCcw, Printer } from 'lucide-react'
 import { api } from '../../api/client'
 import Table, { type Column } from '../../components/ui/Table'
@@ -241,7 +241,6 @@ function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClo
 }
 
 export default function SalesPage() {
-  const qc = useQueryClient()
   const today = new Date().toISOString().split('T')[0]
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ['settings'],

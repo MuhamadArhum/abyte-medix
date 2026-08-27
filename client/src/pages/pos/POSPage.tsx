@@ -183,10 +183,6 @@ interface CartItem {
 interface Customer {
   id: number; name: string; phone: string; creditLimit: string; outstandingBalance: string
 }
-interface HeldSale {
-  id: number; items: any[]; customer: Customer | null; createdAt: string
-}
-
 function calcItemTotal(item: CartItem): number {
   const base = item.qty * item.saleRate
   const afterDisc = base - (base * item.discount) / 100
