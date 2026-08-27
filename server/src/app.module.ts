@@ -20,6 +20,7 @@ import { DashboardModule } from './dashboard/dashboard.module'
 import { BackupModule } from './backup/backup.module'
 import { LicenseModule } from './license/license.module'
 import { ShiftsModule } from './shifts/shifts.module'
+import { DbInitService } from './db-init.service'
 
 @Module({
   imports: [
@@ -47,5 +48,7 @@ import { ShiftsModule } from './shifts/shifts.module'
     LicenseModule,
     ShiftsModule,
   ],
+  providers: [DbInitService],
+  exports: [DbInitService],
 })
 export class AppModule {}
