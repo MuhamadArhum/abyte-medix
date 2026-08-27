@@ -1,11 +1,15 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/auth.store'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
+// In Electron, the main process injects serverUrl via preload.
+// Fall back to env var (dev) or localhost (bare browser).
+const BASE_URL: string =
+  (window as any)?.electronAPI?.serverUrl ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3002/api'
 
 export const api = axios.create({ baseURL: BASE_URL })
 
-/** Extract a human-readable message from an API error response */
 export function getApiError(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data
@@ -40,7 +44,7 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         useAuthStore.getState().logout()
-        window.location.href = '/login'
+        window.location.hash = '/login'
       }
     }
     return Promise.reject(error)

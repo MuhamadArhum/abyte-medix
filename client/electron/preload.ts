@@ -1,10 +1,13 @@
-// Electron preload — must be CommonJS in sandboxed context.
-// Using require() directly (not import) so bundler emits no ESM import statement
-// regardless of vite-plugin-electron format settings.
-
+// Electron preload — CommonJS only (no ESM imports).
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-const { contextBridge } = (require as any)('electron')
+const { contextBridge, ipcRenderer } = (require as any)('electron')
+
+// Read server URL synchronously so api/client.ts has it before the page mounts
+const serverUrl: string = ipcRenderer.sendSync('get-server-url')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
+  serverUrl,
+  restartWithConfig: (cfg: unknown) => ipcRenderer.invoke('restart-with-config', cfg),
+  saveConfig: (cfg: unknown) => ipcRenderer.invoke('save-config', cfg),
 })

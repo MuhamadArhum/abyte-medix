@@ -22,6 +22,7 @@ import BackupPage from './pages/backup/BackupPage'
 import LicensePage from './pages/license/LicensePage'
 import QuotationsPage from './pages/quotations/QuotationsPage'
 import SalesPage from './pages/sales/SalesPage'
+import SetupPage from './pages/setup/SetupPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
@@ -81,6 +82,7 @@ export default function App() {
     <>
       <Toaster position="top-right" richColors closeButton />
       <Routes>
+        <Route path="/setup" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/"
