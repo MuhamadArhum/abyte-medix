@@ -249,5 +249,6 @@ h1, h2, h3 { font-family: var(--font-oswald); text-transform: uppercase; letter-
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   #root { display: none !important; }
   #print-root { display: block !important; }
+  /* Default A4 — overridden by thermal/ledger @page inside each component */
   @page { size: A4; margin: 12mm 14mm; }
 }

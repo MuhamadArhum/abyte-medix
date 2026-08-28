@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Printer } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
 import { api, getApiError } from '../../api/client'
+import { printLedger } from '../../components/ui/PrintLedger'
 
 interface Props {
   supplier: { id: number; name: string; payableBalance?: string }
@@ -16,6 +18,8 @@ export default function SupplierLedger({ supplier, onClose }: Props) {
   const [payMethod, setPayMethod] = useState('CASH')
   const [payRef, setPayRef] = useState('')
   const [payOpen, setPayOpen] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo,   setDateTo]   = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['supplier-ledger', supplier.id],
@@ -37,11 +41,23 @@ export default function SupplierLedger({ supplier, onClose }: Props) {
   })
 
   // Backend returns { supplier, ledger, closingBalance }
-  const entries: any[] = data?.ledger ?? []
-  const closingBalance = data?.closingBalance ?? 0
+  const allEntries: any[] = data?.ledger ?? []
+
+  const entries = useMemo(() => {
+    return allEntries.filter(e => {
+      const d = new Date(e.date ?? e.createdAt)
+      if (dateFrom && d < new Date(dateFrom)) return false
+      if (dateTo   && d > new Date(dateTo + 'T23:59:59')) return false
+      return true
+    })
+  }, [allEntries, dateFrom, dateTo])
+
+  const closingBalance = entries.length > 0
+    ? Number(entries[entries.length - 1]?.balance ?? 0)
+    : (dateFrom || dateTo ? 0 : data?.closingBalance ?? 0)
 
   const totalPurchases = entries.filter(e => e.type === 'PURCHASE').reduce((s: number, e: any) => s + Number(e.credit), 0)
-  const totalPaid = entries.filter(e => e.type === 'PAYMENT' || e.type === 'PURCHASE_RETURN').reduce((s: number, e: any) => s + Number(e.debit), 0)
+  const totalPaid      = entries.filter(e => e.type === 'PAYMENT' || e.type === 'PURCHASE_RETURN').reduce((s: number, e: any) => s + Number(e.debit), 0)
 
   const typeStyle = (type: string) => {
     if (type === 'PURCHASE') return { label: 'Purchase', color: 'var(--red-risk)' }
@@ -56,6 +72,47 @@ export default function SupplierLedger({ supplier, onClose }: Props) {
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : (
         <div className="space-y-4">
+
+          {/* Date filter + Print */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '8px 12px' }}>
+            <span style={{ fontSize: 11, color: 'var(--steel)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filter Period:</span>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              style={{ border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-mono)', background: '#fff' }} />
+            <span style={{ fontSize: 12, color: 'var(--steel)' }}>to</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              style={{ border: '1px solid var(--rule)', borderRadius: 'var(--radius)', padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-mono)', background: '#fff' }} />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo('') }}
+                style={{ fontSize: 11, color: 'var(--red-risk)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+                × Clear
+              </button>
+            )}
+            <button
+              onClick={() => printLedger({
+                partyType: 'Supplier',
+                partyName: supplier.name,
+                dateFrom, dateTo,
+                openingBalance: 0,
+                closingBalance,
+                totalDebit: totalPaid,
+                totalCredit: totalPurchases,
+                entries: entries.map(e => ({
+                  date: e.date ?? e.createdAt,
+                  type: e.type,
+                  reference: e.reference,
+                  debit: e.debit,
+                  credit: e.credit,
+                  balance: e.balance,
+                })),
+                storeName: 'AbyteMedix Pharmacy',
+                printedAt: new Date(),
+              })}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--blueprint)', background: 'var(--blueprint)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+            >
+              <Printer size={14} /> Print Ledger
+            </button>
+          </div>
+
           {/* Summary cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
             <div style={{ borderRadius: 'var(--radius)', padding: '10px 14px', textAlign: 'center', background: 'var(--paper)', border: '1px solid var(--rule)' }}>
