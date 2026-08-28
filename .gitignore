@@ -19,3 +19,6 @@ server/generated/
 client/dist/
 client/dist-electron/
 client/release/
+
+# Seed scripts (local only)
+server/seed*.ts
