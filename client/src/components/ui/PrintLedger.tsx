@@ -45,7 +45,7 @@ export function printLedger(data: LedgerPrintData) {
   const {
     partyType, partyName, partyPhone,
     dateFrom, dateTo,
-    openingBalance, closingBalance, totalDebit, totalCredit,
+    closingBalance, totalDebit, totalCredit,
     entries, storeName, storePhone, printedAt,
   } = data
 
