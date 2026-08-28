@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { utilityProcess } from 'electron'
 import path from 'path'
 import fs from 'fs'
@@ -139,14 +139,17 @@ function getServerBundlePath(): string {
   return path.join(process.resourcesPath, 'server-bundle', 'server.cjs')
 }
 
-function startServer(): Promise<void> {
+function startServer(): Promise<boolean> {
   return new Promise((resolve) => {
     const bundlePath = getServerBundlePath()
     if (!fs.existsSync(bundlePath)) {
       console.error('Server bundle not found:', bundlePath)
-      resolve()
+      resolve(false)
       return
     }
+
+    let resolved = false
+    const done = (ok: boolean) => { if (!resolved) { resolved = true; resolve(ok) } }
 
     serverProc = utilityProcess.fork(bundlePath, [], {
       env: {
@@ -166,7 +169,7 @@ function startServer(): Promise<void> {
     serverProc.stdout?.on('data', (data: Buffer) => {
       const msg = data.toString()
       console.log('[Server]', msg.trim())
-      if (msg.includes('running on') || msg.includes(':3002')) resolve()
+      if (msg.includes('running on') || msg.includes(':3002')) done(true)
     })
 
     serverProc.stderr?.on('data', (data: Buffer) => {
@@ -175,10 +178,11 @@ function startServer(): Promise<void> {
 
     serverProc.on('exit', (code) => {
       console.log('[Server] Exited with code', code)
+      done(false)
     })
 
-    // Fallback: open app after 45 seconds regardless
-    setTimeout(resolve, 45000)
+    // Fallback: consider started after 45s
+    setTimeout(() => done(true), 45000)
   })
 }
 
@@ -224,13 +228,26 @@ function setupIPC() {
   })
 }
 
+async function showStartupError(title: string, detail: string, manualSteps: string[]) {
+  const stepsText = manualSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')
+  const { response } = await dialog.showMessageBox({
+    type: 'error',
+    title,
+    message: title,
+    detail: `${detail}\n\nManual Fix Steps:\n${stepsText}`,
+    buttons: ['Retry', 'Download VC++ Runtime', 'Exit'],
+    defaultId: 0,
+    cancelId: 2,
+  })
+  return response // 0=Retry, 1=Download, 2=Exit
+}
+
 async function bootstrap() {
   setupIPC()
 
   const config = readConfig()
 
   if (!config) {
-    // First run: show setup wizard
     createWindow('/setup')
     return
   }
@@ -238,12 +255,66 @@ async function bootstrap() {
   globalServerUrl = config.serverUrl
 
   if (config.mode === 'single') {
-    try {
-      await startMariaDb()
-    } catch (e: any) {
-      console.error('[MariaDB] Failed to start:', e.message)
+    let mariaDbStarted = false
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await startMariaDb()
+        mariaDbStarted = true
+        break
+      } catch (e: any) {
+        console.error('[MariaDB] Failed to start:', e.message)
+
+        const choice = await showStartupError(
+          'Database Failed to Start',
+          `MariaDB could not start. This usually happens when Microsoft Visual C++ Runtime is not installed on this PC.\n\nError: ${e.message}`,
+          [
+            'Click "Download VC++ Runtime" button below to download it',
+            'Install "VC_redist.x64.exe" (restart may be required)',
+            'Re-open AbyteMedix after installation',
+          ],
+        )
+
+        if (choice === 1) {
+          shell.openExternal('https://aka.ms/vs/17/release/vc_redist.x64.exe')
+          app.quit()
+          return
+        } else if (choice === 2) {
+          app.quit()
+          return
+        }
+        // choice === 0 → Retry next iteration
+      }
     }
-    await startServer()
+
+    if (!mariaDbStarted) {
+      await dialog.showMessageBox({
+        type: 'error',
+        title: 'Cannot Start Database',
+        message: 'AbyteMedix could not start the database after retrying.',
+        detail: 'Please install Microsoft Visual C++ 2015-2022 Redistributable (x64) and try again.',
+        buttons: ['Exit'],
+      })
+      app.quit()
+      return
+    }
+
+    const serverOk = await startServer()
+    if (!serverOk) {
+      const { response } = await dialog.showMessageBox({
+        type: 'error',
+        title: 'Server Failed to Start',
+        message: 'AbyteMedix server could not start.',
+        detail: 'Manual Fix Steps:\n1. Close AbyteMedix\n2. Restart your PC and try again\n3. If issue persists, re-install AbyteMedix\n4. Contact support if problem continues',
+        buttons: ['Try Anyway', 'Exit'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+      if (response === 1) {
+        app.quit()
+        return
+      }
+    }
   }
 
   createWindow()

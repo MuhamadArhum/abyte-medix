@@ -6,13 +6,16 @@ module.exports = {
   mode: 'production',
   devtool: false,
   externals: {
-    // Optional peer deps that @nestjs packages try to import
+    // Optional peer deps that @nestjs packages try to import (never used at runtime)
     '@fastify/static': 'commonjs @fastify/static',
     'fastify': 'commonjs fastify',
-    'class-transformer/storage': 'commonjs class-transformer/storage',
+    // class-transformer/storage must NOT be external — server-bundle has no node_modules
   },
   resolve: {
     extensions: ['.ts', '.js'],
+    alias: {
+      'class-transformer/storage': require.resolve('class-transformer/cjs/storage'),
+    },
   },
   module: {
     rules: [
