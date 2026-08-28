@@ -7,6 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "seed": "ts-node -e \"require('dotenv/config')\" seed.ts",
+    "seed:bulk": "ts-node --transpile-only seed-bulk.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
