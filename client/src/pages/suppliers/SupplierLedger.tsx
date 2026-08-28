@@ -18,8 +18,9 @@ export default function SupplierLedger({ supplier, onClose }: Props) {
   const [payMethod, setPayMethod] = useState('CASH')
   const [payRef, setPayRef] = useState('')
   const [payOpen, setPayOpen] = useState(false)
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo,   setDateTo]   = useState('')
+  const today = new Date().toISOString().slice(0, 10)
+  const [dateFrom, setDateFrom] = useState(today)
+  const [dateTo,   setDateTo]   = useState(today)
 
   const { data, isLoading } = useQuery({
     queryKey: ['supplier-ledger', supplier.id],
