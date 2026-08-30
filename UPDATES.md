@@ -13,6 +13,8 @@
 | 3 | **Expense Categories (smart dropdown)** — Expense and Income category inputs now auto-suggest previously used categories via browser datalist. Backend `GET /accounts/expense-categories` and `GET /accounts/income-categories` endpoints added. No schema change — reuses existing free-text field. | ✅ Done |
 | 4 | **Report Export — CSV** — "Export CSV" button added to 4 report tables: Top Selling Products, Sales by Customer, Purchases by Supplier, Stock Valuation. Client-side CSV generation with proper escaping, instant download. | ✅ Done |
 | 5 | **Auto-update (Electron)** — `electron-updater` wired to GitHub releases. App checks for updates 10 seconds after launch. Settings page now has "App Updates" section: Check / Download / Install with a live progress bar. | ✅ Done |
+| 6 | **Setup Screen — First Launch Only** — Fixed: setup selector (Server/Client mode) now shows only on first install. Browser-mode guard added: if config already in localStorage, redirects to login. Production Electron behavior was already correct via `config.json` check in `main.ts`. | ✅ Done |
+| 7 | **GitHub Release v1.2.0** — Built fresh installer (`AbyteMedix Setup 1.2.0.exe`, 171 MB) and published as latest release on GitHub. | ✅ Done |
 
 ### Already Done (Verified this session)
 

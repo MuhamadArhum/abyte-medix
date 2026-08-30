@@ -1,7 +1,7 @@
 {
   "name": "abyte-medix-client",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -15,6 +15,7 @@
   "build": {
     "appId": "com.abyte.medix",
     "productName": "AbyteMedix",
+    "electronDist": "electron-dist",
     "directories": {
       "output": "release"
     },

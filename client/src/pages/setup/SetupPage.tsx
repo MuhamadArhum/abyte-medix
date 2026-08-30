@@ -30,6 +30,12 @@ export default function SetupPage() {
 
   const eAPI = (window as any)?.electronAPI
 
+  // If already configured (browser/dev mode), skip setup
+  if (!eAPI && localStorage.getItem('abyte_config')) {
+    window.location.hash = '/login'
+    return null
+  }
+
   async function handleSave() {
     setError('')
 
@@ -112,7 +118,7 @@ export default function SetupPage() {
         </div>
 
         <div style={{ marginTop: 24, fontSize: 11, color: C.sub, textAlign: 'center' }}>
-          AbyteMedix v1.0.0 · Medical Store Management System
+          AbyteMedix v1.2.0 · Medical Store Management System
         </div>
       </div>
     )
