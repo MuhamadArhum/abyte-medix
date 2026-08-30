@@ -140,6 +140,73 @@ export default function SettingsPage() {
             <input className={inputCls} value={form.backup_path ?? ''} onChange={e => set('backup_path', e.target.value)} placeholder="C:/backups/" />
           </div>
         </Section>
+
+        <UpdateSection />
+      </div>
+    </div>
+  )
+}
+
+function UpdateSection() {
+  const [status, setStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'ready' | 'error'>('idle')
+  const [updateInfo, setUpdateInfo] = useState<any>(null)
+  const [progress, setProgress] = useState(0)
+  const [errorMsg, setErrorMsg] = useState('')
+  const electron = (window as any).electronAPI
+
+  useEffect(() => {
+    if (!electron?.onUpdateAvailable) return
+    electron.onUpdateAvailable((info: any) => { setUpdateInfo(info); setStatus('available') })
+    electron.onUpdateNotAvailable(() => setStatus('not-available'))
+    electron.onUpdateProgress((p: any) => { setProgress(Math.round(p.percent ?? 0)); setStatus('downloading') })
+    electron.onUpdateDownloaded(() => setStatus('ready'))
+    electron.onUpdateError((msg: string) => { setErrorMsg(msg); setStatus('error') })
+  }, [])
+
+  if (!electron?.checkForUpdates) return (
+    <div className="card card-p">
+      <div className="card-title">App Updates</div>
+      <p style={{ fontSize: 13, color: 'var(--steel)' }}>Auto-update is only available in the installed desktop app.</p>
+    </div>
+  )
+
+  return (
+    <div className="card card-p">
+      <div className="card-title" style={{ marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--rule)' }}>App Updates</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 13, color: 'var(--steel)' }}>
+            {status === 'idle' && 'Click to check for a new version.'}
+            {status === 'checking' && 'Checking for updates…'}
+            {status === 'not-available' && 'You are on the latest version.'}
+            {status === 'available' && `Update v${updateInfo?.version} is available.`}
+            {status === 'downloading' && `Downloading… ${progress}%`}
+            {status === 'ready' && 'Update downloaded. Restart to apply.'}
+            {status === 'error' && `Update error: ${errorMsg}`}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(status === 'idle' || status === 'not-available' || status === 'error') && (
+              <button className="btn btn-secondary" onClick={() => { setStatus('checking'); electron.checkForUpdates() }}>
+                Check for Updates
+              </button>
+            )}
+            {status === 'available' && (
+              <button className="btn btn-primary" onClick={() => electron.downloadUpdate()}>
+                Download Update
+              </button>
+            )}
+            {status === 'ready' && (
+              <button className="btn btn-primary" onClick={() => electron.installUpdate()}>
+                Restart & Install
+              </button>
+            )}
+          </div>
+        </div>
+        {status === 'downloading' && (
+          <div style={{ height: 6, borderRadius: 3, background: 'var(--rule)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: 'var(--orange)', width: `${progress}%`, transition: 'width 0.3s' }} />
+          </div>
+        )}
       </div>
     </div>
   )

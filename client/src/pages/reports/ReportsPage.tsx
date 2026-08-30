@@ -1,8 +1,19 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Download } from 'lucide-react'
 import { api } from '../../api/client'
 import Spinner from '../../components/ui/Spinner'
+
+function downloadCSV(rows: Record<string, unknown>[], headers: string[], keys: string[], filename: string) {
+  const escape = (v: unknown) => {
+    const s = String(v ?? '')
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const lines = [headers.join(','), ...rows.map(r => keys.map(k => escape(r[k])).join(','))]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click()
+}
 
 type Tab = 'sales' | 'purchases' | 'inventory' | 'pl'
 type GroupBy = 'day' | 'month'
@@ -181,8 +192,12 @@ export default function ReportsPage() {
           </div>
 
           <div className="card">
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Top Selling Products</h3>
+              <button onClick={() => downloadCSV(salesByProduct ?? [], ['Medicine', 'Qty Sold', 'Revenue'], ['brandName', 'totalQty', 'totalRevenue'], `sales-by-product-${from}-${to}.csv`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--rule)', background: 'var(--paper-light)', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--steel)' }}>
+                <Download size={13} /> Export CSV
+              </button>
             </div>
             {productLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
@@ -212,8 +227,12 @@ export default function ReportsPage() {
           </div>
 
           <div className="card">
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Sales by Customer</h3>
+              <button onClick={() => downloadCSV(salesByCustomer ?? [], ['Customer', 'Transactions', 'Total Amount'], ['name', 'count', 'totalSales'], `sales-by-customer-${from}-${to}.csv`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--rule)', background: 'var(--paper-light)', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--steel)' }}>
+                <Download size={13} /> Export CSV
+              </button>
             </div>
             {custLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
@@ -277,8 +296,12 @@ export default function ReportsPage() {
           </div>
 
           <div className="card">
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Purchases by Supplier</h3>
+              <button onClick={() => downloadCSV(purchasesBySupplier ?? [], ['Supplier', 'Orders', 'Total Amount'], ['name', 'count', 'totalPurchases'], `purchases-by-supplier-${from}-${to}.csv`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--rule)', background: 'var(--paper-light)', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--steel)' }}>
+                <Download size={13} /> Export CSV
+              </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="tbl" style={{ minWidth: 360 }}>
@@ -371,8 +394,12 @@ export default function ReportsPage() {
           </div>
 
           <div className="card">
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 className="card-title" style={{ marginBottom: 0 }}>Stock Valuation</h3>
+              <button onClick={() => downloadCSV(valuationItems, ['Medicine', 'Qty', 'Cost Value', 'Sale Value'], ['brandName', 'totalQty', 'costValue', 'saleValue'], 'stock-valuation.csv')}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--rule)', background: 'var(--paper-light)', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--steel)' }}>
+                <Download size={13} /> Export CSV
+              </button>
             </div>
             {valLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>

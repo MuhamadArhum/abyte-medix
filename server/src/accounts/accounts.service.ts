@@ -222,6 +222,18 @@ export class AccountsService {
     }
   }
 
+  // ── Categories ───────────────────────────────────────────────────────────
+
+  async getExpenseCategories() {
+    const rows = await this.prisma.expense.findMany({ select: { category: true }, distinct: ['category'], orderBy: { category: 'asc' } })
+    return rows.map(r => r.category).filter(Boolean)
+  }
+
+  async getIncomeCategories() {
+    const rows = await this.prisma.income.findMany({ select: { category: true }, distinct: ['category'], orderBy: { category: 'asc' } })
+    return rows.map(r => r.category).filter(Boolean)
+  }
+
   // ── Cash Report ───────────────────────────────────────────────────────────
 
   async getCashReport(date?: string) {

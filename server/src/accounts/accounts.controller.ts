@@ -82,6 +82,18 @@ export class AccountsController {
     return this.accounts.getSummary(from, to)
   }
 
+  @ApiOperation({ summary: 'Get distinct expense categories' })
+  @Get('expense-categories')
+  getExpenseCategories() {
+    return this.accounts.getExpenseCategories()
+  }
+
+  @ApiOperation({ summary: 'Get distinct income categories' })
+  @Get('income-categories')
+  getIncomeCategories() {
+    return this.accounts.getIncomeCategories()
+  }
+
   @ApiOperation({ summary: 'Get daily cash flow report' })
   @Get('cash-report')
   getCashReport(@Query('date') date: string) {

@@ -61,6 +61,8 @@ export default function AccountsPage() {
   const { data: cashReport } = useQuery({ queryKey: ['cash-report', cashDate], queryFn: () => api.get(`/accounts/cash-report?date=${cashDate}`).then(r => r.data), enabled: tab === 'cash' })
   const { data: customers } = useQuery({ queryKey: ['customers-list'], queryFn: () => api.get('/customers?limit=500').then(r => r.data), enabled: payOpen })
   const { data: suppliers } = useQuery({ queryKey: ['suppliers-list'], queryFn: () => api.get('/suppliers?limit=500').then(r => r.data), enabled: payOpen })
+  const { data: expCats } = useQuery<string[]>({ queryKey: ['expense-categories'], queryFn: () => api.get('/accounts/expense-categories').then(r => r.data), enabled: expOpen })
+  const { data: incCats } = useQuery<string[]>({ queryKey: ['income-categories'], queryFn: () => api.get('/accounts/income-categories').then(r => r.data), enabled: incOpen })
 
   const expMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/expenses', p).then(r => r.data), onSuccess: () => { toast.success('Expense added'); setExpOpen(false); qc.invalidateQueries({ queryKey: ['expenses'] }) }, onError: (err) => toast.error(getApiError(err)) })
   const incMutation = useMutation({ mutationFn: (p: any) => api.post('/accounts/income', p).then(r => r.data), onSuccess: () => { toast.success('Income added'); setIncOpen(false); qc.invalidateQueries({ queryKey: ['income'] }) }, onError: (err) => toast.error(getApiError(err)) })
@@ -203,7 +205,11 @@ export default function AccountsPage() {
       {/* Expense Modal */}
       <Modal isOpen={expOpen} onClose={() => setExpOpen(false)} title="Add Expense" size="sm"
         footer={<><button className="btn btn-secondary" onClick={() => setExpOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={expMutation.isPending} onClick={() => expMutation.mutate({ ...expForm, amount: parseFloat(expForm.amount) })}>{expMutation.isPending && <Spinner size="sm" />}Add</button></>}>
-        <div className="field-group"><label className="field-label">Category</label><input className="field-input" value={expForm.category} onChange={e => setExpForm(p => ({ ...p, category: e.target.value }))} placeholder="Rent, Utilities…" /></div>
+        <div className="field-group">
+          <label className="field-label">Category</label>
+          <input list="exp-cats" className="field-input" value={expForm.category} onChange={e => setExpForm(p => ({ ...p, category: e.target.value }))} placeholder="Rent, Utilities…" />
+          <datalist id="exp-cats">{(expCats ?? []).map(c => <option key={c} value={c} />)}</datalist>
+        </div>
         <div className="field-group"><label className="field-label">Description</label><input className="field-input" value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} /></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="field-group"><label className="field-label">Amount (Rs.)</label><input type="number" className="field-input" value={expForm.amount} onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))} /></div>
@@ -214,7 +220,11 @@ export default function AccountsPage() {
       {/* Income Modal */}
       <Modal isOpen={incOpen} onClose={() => setIncOpen(false)} title="Add Income" size="sm"
         footer={<><button className="btn btn-secondary" onClick={() => setIncOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={incMutation.isPending} onClick={() => incMutation.mutate({ ...incForm, amount: parseFloat(incForm.amount) })}>{incMutation.isPending && <Spinner size="sm" />}Add</button></>}>
-        <div className="field-group"><label className="field-label">Category</label><input className="field-input" value={incForm.category} onChange={e => setIncForm(p => ({ ...p, category: e.target.value }))} /></div>
+        <div className="field-group">
+          <label className="field-label">Category</label>
+          <input list="inc-cats" className="field-input" value={incForm.category} onChange={e => setIncForm(p => ({ ...p, category: e.target.value }))} placeholder="Sales Commission, Other…" />
+          <datalist id="inc-cats">{(incCats ?? []).map(c => <option key={c} value={c} />)}</datalist>
+        </div>
         <div className="field-group"><label className="field-label">Description</label><input className="field-input" value={incForm.description} onChange={e => setIncForm(p => ({ ...p, description: e.target.value }))} /></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="field-group"><label className="field-label">Amount (Rs.)</label><input type="number" className="field-input" value={incForm.amount} onChange={e => setIncForm(p => ({ ...p, amount: e.target.value }))} /></div>

@@ -6,6 +6,7 @@ import net from 'net'
 import { spawn } from 'child_process'
 import type { ChildProcess } from 'child_process'
 import { fileURLToPath } from 'url'
+import { autoUpdater } from 'electron-updater'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -212,6 +213,37 @@ function createWindow(hash?: string) {
   return win
 }
 
+function setupAutoUpdater(win: BrowserWindow) {
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-available', (info) => {
+    win.webContents.send('update-available', info)
+  })
+  autoUpdater.on('update-not-available', () => {
+    win.webContents.send('update-not-available')
+  })
+  autoUpdater.on('download-progress', (progress) => {
+    win.webContents.send('update-progress', progress)
+  })
+  autoUpdater.on('update-downloaded', (info) => {
+    win.webContents.send('update-downloaded', info)
+  })
+  autoUpdater.on('error', (err) => {
+    win.webContents.send('update-error', err.message)
+  })
+
+  ipcMain.handle('check-for-updates', () => {
+    if (!isDev) autoUpdater.checkForUpdates().catch(console.error)
+  })
+  ipcMain.handle('download-update', () => {
+    autoUpdater.downloadUpdate().catch(console.error)
+  })
+  ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall()
+  })
+}
+
 function setupIPC() {
   ipcMain.on('get-server-url', (event) => {
     event.returnValue = globalServerUrl
@@ -248,7 +280,8 @@ async function bootstrap() {
   const config = readConfig()
 
   if (!config) {
-    createWindow('/setup')
+    const setupWin = createWindow('/setup')
+    setupAutoUpdater(setupWin)
     return
   }
 
@@ -317,7 +350,9 @@ async function bootstrap() {
     }
   }
 
-  createWindow()
+  const win = createWindow()
+  setupAutoUpdater(win)
+  if (!isDev) setTimeout(() => autoUpdater.checkForUpdates().catch(console.error), 10000)
 }
 
 app.whenReady().then(bootstrap)

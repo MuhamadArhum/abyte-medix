@@ -26,12 +26,16 @@
       {
         "from": "server-bundle",
         "to": "server-bundle",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "mariadb-bin",
         "to": "mariadb-bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
@@ -43,6 +47,11 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "MuhamadArhum",
+      "repo": "abyte-medix"
     }
   },
   "dependencies": {
@@ -55,6 +64,7 @@
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.19.0",
     "date-fns": "^4.4.0",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

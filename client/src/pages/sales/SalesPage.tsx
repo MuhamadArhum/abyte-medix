@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Eye, X, RotateCcw, Printer } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Eye, X, RotateCcw, Printer, CornerUpLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import { api } from '../../api/client'
+import Spinner from '../../components/ui/Spinner'
 import Table, { type Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 import SearchInput from '../../components/ui/SearchInput'
@@ -47,7 +49,7 @@ interface SaleDetail {
   customer: { id: number; name: string; phone: string } | null
   user: { fullName: string } | null
   items: {
-    id: number; quantity: number; saleRate: string; discount: number; taxRate: number; total: string
+    id: number; batchId: number; quantity: number; saleRate: string; discount: number; taxRate: number; total: string
     batch: { batchNumber: string; expiryDate: string; medicine: { brandName: string; strength: string; productCode?: string } }
   }[]
 }
@@ -64,10 +66,94 @@ function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-PK', { d
 function fmtTime(d: string) { return new Date(d).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' }) }
 
 function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClose: () => void; storeName: string }) {
+  const qc = useQueryClient()
   const { data, isLoading } = useQuery<SaleDetail>({
     queryKey: ['sale-detail', saleId],
     queryFn: () => api.get(`/sales/${saleId}`).then(r => r.data),
   })
+  const [returnOpen, setReturnOpen] = useState(false)
+  const [returnReason, setReturnReason] = useState('')
+  const [returnMethod, setReturnMethod] = useState('CASH')
+  const [returnQtys, setReturnQtys] = useState<Record<number, number>>({})
+
+  const returnMutation = useMutation({
+    mutationFn: () => {
+      const items = (data?.items ?? [])
+        .filter(i => (returnQtys[i.id] ?? 0) > 0)
+        .map(i => ({
+          batchId: i.batchId,
+          quantity: returnQtys[i.id],
+          isDamaged: false,
+          refundAmount: Math.round((Number(i.total) / i.quantity) * returnQtys[i.id]),
+        }))
+      const refundAmount = items.reduce((s, x) => s + x.refundAmount, 0)
+      return api.post(`/sales/${saleId}/return`, { reason: returnReason, refundAmount, refundMethod: returnMethod, items }).then(r => r.data)
+    },
+    onSuccess: () => {
+      toast.success('Sale return recorded')
+      setReturnOpen(false)
+      qc.invalidateQueries({ queryKey: ['sales'] })
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Return failed'),
+  })
+
+  if (returnOpen && data) return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(27,30,33,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70, padding: 16 }} onClick={() => setReturnOpen(false)}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(27,30,33,0.2)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ fontWeight: 800, fontSize: 15 }}>Return — {data.invoiceNumber}</div>
+          <button onClick={() => setReturnOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.faint }}><X size={18} /></button>
+        </div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ fontSize: 12.5, color: C.subtext }}>Select quantities to return:</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+            <thead><tr style={{ background: 'var(--paper)' }}>
+              {['Medicine', 'Sold', 'Return Qty'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.faint, textTransform: 'uppercase' }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {data.items.map(item => (
+                <tr key={item.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: '8px 10px' }}>{item.batch.medicine.brandName} <span style={{ color: C.faint }}>{item.batch.medicine.strength}</span></td>
+                  <td style={{ padding: '8px 10px', fontWeight: 700 }}>{item.quantity}</td>
+                  <td style={{ padding: '8px 10px' }}>
+                    <input type="number" min={0} max={item.quantity} value={returnQtys[item.id] ?? 0}
+                      onChange={e => setReturnQtys(p => ({ ...p, [item.id]: Math.min(item.quantity, Math.max(0, Number(e.target.value))) }))}
+                      style={{ width: 70, padding: '4px 8px', border: `1px solid ${C.border}`, borderRadius: 6, textAlign: 'center', fontFamily: 'var(--font-mono)' }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.faint, textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Reason</label>
+              <input value={returnReason} onChange={e => setReturnReason(e.target.value)} placeholder="Wrong item, damaged…"
+                style={{ width: '100%', padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.faint, textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Refund Method</label>
+              <select value={returnMethod} onChange={e => setReturnMethod(e.target.value)}
+                style={{ width: '100%', padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13 }}>
+                <option value="CASH">Cash</option>
+                <option value="BANK">Bank</option>
+                <option value="CREDIT">Store Credit</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
+            <button onClick={() => setReturnOpen(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+            <button
+              disabled={returnMutation.isPending || !returnReason || Object.values(returnQtys).every(q => q === 0)}
+              onClick={() => returnMutation.mutate()}
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#D9A441', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: returnMutation.isPending ? 0.6 : 1 }}>
+              {returnMutation.isPending && <Spinner size="sm" />}
+              Confirm Return
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   const printSale = (s: SaleDetail) => {
     const win = window.open('', '_blank', 'width=800,height=900')
@@ -143,13 +229,22 @@ function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClo
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {data && (
-              <button onClick={() => printSale(data)} style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-                borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff',
-                color: C.text, fontWeight: 600, fontSize: 12, cursor: 'pointer',
-              }}>
-                <Printer size={13} /> Print
-              </button>
+              <>
+                <button onClick={() => setReturnOpen(true)} style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+                  borderRadius: 8, border: `1px solid #F5D99C`, background: '#FDF2E1',
+                  color: '#93630F', fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                }}>
+                  <CornerUpLeft size={13} /> Return
+                </button>
+                <button onClick={() => printSale(data)} style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+                  borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff',
+                  color: C.text, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                }}>
+                  <Printer size={13} /> Print
+                </button>
+              </>
             )}
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.faint, padding: 4 }}>
               <X size={18} />

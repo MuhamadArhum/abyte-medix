@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Printer, CreditCard } from 'lucide-react'
+import { Printer, CreditCard, CornerUpLeft, X } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
@@ -18,6 +18,9 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
   const [printing, setPrinting] = useState(false)
   const [paymentAmt, setPaymentAmt] = useState('')
   const [paymentOpen, setPaymentOpen] = useState(false)
+  const [returnOpen, setReturnOpen] = useState(false)
+  const [returnReason, setReturnReason] = useState('')
+  const [returnQtys, setReturnQtys] = useState<Record<number, number>>({})
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -49,17 +52,20 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
   })
 
   const returnMutation = useMutation({
-    mutationFn: () => api.post(`/purchases/${purchaseId}/return`, {
-      reason: 'Full purchase return',
-      items: (purchase?.items ?? []).map((i: any) => ({
-        batchId: i.batchId,
-        quantity: i.quantity,
-        amount: Number(i.total),
-      })),
-      totalAmount: Number(purchase?.total ?? 0),
-    }).then(r => r.data),
+    mutationFn: () => {
+      const items = (purchase?.items ?? [])
+        .filter((i: any) => (returnQtys[i.id] ?? 0) > 0)
+        .map((i: any) => ({
+          batchId: i.batchId,
+          quantity: returnQtys[i.id],
+          amount: Math.round((Number(i.total) / i.quantity) * returnQtys[i.id]),
+        }))
+      const totalAmount = items.reduce((s: number, x: any) => s + x.amount, 0)
+      return api.post(`/purchases/${purchaseId}/return`, { reason: returnReason, items, totalAmount }).then(r => r.data)
+    },
     onSuccess: () => {
       toast.success('Purchase return recorded')
+      setReturnOpen(false)
       qc.invalidateQueries({ queryKey: ['purchases'] })
       qc.invalidateQueries({ queryKey: ['purchase', purchaseId] })
     },
@@ -175,13 +181,12 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
                 </button>
               )}
               <button
-                onClick={() => returnMutation.mutate()}
-                disabled={returnMutation.isPending || purchase.status === 'DRAFT'}
+                onClick={() => setReturnOpen(true)}
+                disabled={purchase.status === 'DRAFT'}
                 className="btn disabled:opacity-50"
-                style={{ background: '#FDF2E1', color: '#93630F', border: '1px solid #F5D99C' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FDF2E1', color: '#93630F', border: '1px solid #F5D99C' }}
               >
-                {returnMutation.isPending && <Spinner size="sm" />}
-                Return Purchase
+                <CornerUpLeft size={14} /> Return Purchase
               </button>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -207,6 +212,54 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
           data={purchase}
           onAfterPrint={() => setPrinting(false)}
         />
+      )}
+
+      {returnOpen && purchase && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(27,30,33,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70, padding: 16 }} onClick={() => setReturnOpen(false)}>
+          <div style={{ background: '#fff', borderRadius: 14, width: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(27,30,33,0.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--rule)' }}>
+              <div style={{ fontWeight: 800, fontSize: 15 }}>Return — {purchase.invoiceNumber}</div>
+              <button onClick={() => setReturnOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--steel)' }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ fontSize: 12.5, color: 'var(--steel)' }}>Select items and quantities to return to supplier:</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                <thead><tr style={{ background: 'var(--paper)' }}>
+                  {['Medicine', 'Batch', 'Received', 'Return Qty'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--steel)', textTransform: 'uppercase' }}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {(purchase.items ?? []).map((item: any) => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--rule)' }}>
+                      <td style={{ padding: '8px 10px' }}>{item.medicine?.brandName ?? item.batch?.medicine?.brandName}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--steel)' }}>{item.batch?.batchNumber}</td>
+                      <td style={{ padding: '8px 10px', fontWeight: 700 }}>{item.quantity}</td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <input type="number" min={0} max={item.quantity} value={returnQtys[item.id] ?? 0}
+                          onChange={e => setReturnQtys(p => ({ ...p, [item.id]: Math.min(item.quantity, Math.max(0, Number(e.target.value))) }))}
+                          style={{ width: 70, padding: '4px 8px', border: '1px solid var(--rule)', borderRadius: 6, textAlign: 'center', fontFamily: 'var(--font-mono)' }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--steel)', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Reason</label>
+                <input value={returnReason} onChange={e => setReturnReason(e.target.value)} placeholder="Damaged, wrong item…"
+                  style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--rule)', borderRadius: 8, fontSize: 13 }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button onClick={() => setReturnOpen(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--rule)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                <button
+                  disabled={returnMutation.isPending || !returnReason || Object.values(returnQtys).every(q => q === 0)}
+                  onClick={() => returnMutation.mutate()}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--orange)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: returnMutation.isPending ? 0.6 : 1 }}>
+                  {returnMutation.isPending && <Spinner size="sm" />}
+                  Confirm Return
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </Modal>
   )
