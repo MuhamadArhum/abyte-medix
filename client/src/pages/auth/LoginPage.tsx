@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Pill } from 'lucide-react'
-import { api } from '../../api/client'
+import { api, getApiError } from '../../api/client'
 import { useAuthStore } from '../../store/auth.store'
 
 export default function LoginPage() {
@@ -20,8 +20,13 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/login', { username, password })
       setAuth(data.user, data.accessToken, data.refreshToken)
       navigate('/', { replace: true })
-    } catch {
-      setError('Invalid username or password')
+    } catch (err) {
+      const msg = getApiError(err)
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials') || msg.toLowerCase().includes('unauthorized')) {
+        setError('Invalid username or password')
+      } else {
+        setError(msg || 'Cannot connect to server. Please check if the app is running correctly.')
+      }
     } finally {
       setLoading(false)
     }

@@ -2,6 +2,17 @@
 
 ---
 
+## v1.2.1 — 2026-08-30
+
+### ✅ Completed
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | **Login Error Fix** — Login page now shows the actual error message instead of always showing "Invalid username or password". Network errors, server-down errors, and real credential errors are now distinguished properly. | ✅ Done |
+| 2 | **GitHub Release v1.2.1** — Built fresh installer (`AbyteMedix Setup 1.2.1.exe`, 171 MB) and published as latest release on GitHub. | ✅ Done |
+
+---
+
 ## v1.2.0 — 2026-08-30
 
 ### ✅ Completed
