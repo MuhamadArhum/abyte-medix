@@ -87,6 +87,7 @@ async function startMariaDb(): Promise<void> {
     fs.mkdirSync(dataDir, { recursive: true })
 
     await new Promise<void>((resolve, reject) => {
+      const initLines: string[] = []
       const init = spawn(mysqldPath, [
         '--initialize-insecure',
         `--datadir=${dataDir}`,
@@ -95,12 +96,21 @@ async function startMariaDb(): Promise<void> {
 
       init.stderr?.on('data', (d: Buffer) => {
         const msg = d.toString().trim()
-        if (msg) console.log('[MariaDB init]', msg)
+        if (msg) { console.log('[MariaDB init]', msg); initLines.push(msg) }
       })
-      init.on('error', reject)
-      init.on('close', () => {
-        if (fs.existsSync(path.join(dataDir, 'mysql'))) resolve()
-        else reject(new Error('MariaDB initialization failed — mysql system dir not created'))
+      init.stdout?.on('data', (d: Buffer) => {
+        const msg = d.toString().trim()
+        if (msg) { console.log('[MariaDB init]', msg); initLines.push(msg) }
+      })
+      init.on('error', (err) => reject(new Error(`mysqld.exe spawn failed: ${err.message}`)))
+      init.on('close', (code) => {
+        if (fs.existsSync(path.join(dataDir, 'mysql'))) {
+          resolve()
+        } else {
+          const detail = initLines.slice(-10).join('\n')
+          reject(new Error(`MariaDB init failed (exit ${code}):\n${detail || 'No output captured'}`)
+          )
+        }
       })
     })
 
@@ -109,27 +119,38 @@ async function startMariaDb(): Promise<void> {
 
   // Start the server
   console.log(`[MariaDB] Starting on port ${MARIADB_PORT}...`)
-  mariadbProc = spawn(mysqldPath, [
-    `--datadir=${dataDir}`,
-    `--basedir=${mariadbDir}`,
-    `--port=${MARIADB_PORT}`,
-    '--bind-address=127.0.0.1',
-    '--console',
-  ], { stdio: 'pipe' })
+  const serverLines: string[] = []
 
-  mariadbProc.stdout?.on('data', (d: Buffer) => {
-    const msg = d.toString().trim()
-    if (msg) console.log('[MariaDB]', msg)
-  })
-  mariadbProc.stderr?.on('data', (d: Buffer) => {
-    const msg = d.toString().trim()
-    if (msg) console.log('[MariaDB]', msg)
-  })
-  mariadbProc.on('exit', (code) => {
-    console.log('[MariaDB] Process exited with code', code)
+  await new Promise<void>((resolve, reject) => {
+    mariadbProc = spawn(mysqldPath, [
+      `--datadir=${dataDir}`,
+      `--basedir=${mariadbDir}`,
+      `--port=${MARIADB_PORT}`,
+      '--bind-address=127.0.0.1',
+      '--console',
+    ], { stdio: 'pipe' })
+
+    const collectLine = (d: Buffer) => {
+      const msg = d.toString().trim()
+      if (msg) { console.log('[MariaDB]', msg); serverLines.push(msg) }
+    }
+    mariadbProc.stdout?.on('data', collectLine)
+    mariadbProc.stderr?.on('data', collectLine)
+
+    mariadbProc.on('error', (err) => reject(new Error(`mysqld.exe spawn failed: ${err.message}`)))
+
+    mariadbProc.on('exit', (code) => {
+      console.log('[MariaDB] Process exited with code', code)
+      const detail = serverLines.slice(-15).join('\n')
+      reject(new Error(`MariaDB crashed (exit ${code}):\n${detail || 'No output captured'}`))
+    })
+
+    waitForPort(MARIADB_PORT, 90000).then(resolve).catch((timeoutErr) => {
+      const detail = serverLines.slice(-15).join('\n')
+      reject(new Error(`${timeoutErr.message}\n\nMariaDB output:\n${detail || 'No output captured'}`))
+    })
   })
 
-  await waitForPort(MARIADB_PORT, 90000)
   console.log('[MariaDB] Ready!')
 }
 
@@ -300,10 +321,10 @@ async function bootstrap() {
 
         const choice = await showStartupError(
           'Database Failed to Start',
-          `MariaDB could not start. This usually happens when Microsoft Visual C++ Runtime is not installed on this PC.\n\nError: ${e.message}`,
+          `MariaDB could not start.\n\n${e.message}\n\nIf the error mentions a missing DLL, install Microsoft Visual C++ 2015-2022 Redistributable (x64).`,
           [
-            'Click "Download VC++ Runtime" button below to download it',
-            'Install "VC_redist.x64.exe" (restart may be required)',
+            'Click "Download VC++ Runtime" below if a DLL error is shown',
+            'Install "VC_redist.x64.exe" and restart your PC',
             'Re-open AbyteMedix after installation',
           ],
         )
