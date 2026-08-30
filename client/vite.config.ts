@@ -33,8 +33,9 @@ export default defineConfig({
         vite: {
           build: {
             outDir: 'dist-electron',
-            sourcemap: true,
+            sourcemap: false,
             rollupOptions: {
+              external: ['electron'],
               output: { format: 'cjs', entryFileNames: '[name].cjs' },
             },
           },

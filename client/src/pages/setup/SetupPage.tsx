@@ -118,7 +118,7 @@ export default function SetupPage() {
         </div>
 
         <div style={{ marginTop: 24, fontSize: 11, color: C.sub, textAlign: 'center' }}>
-          AbyteMedix v1.2.2 · Medical Store Management System
+          AbyteMedix v1.2.3 · Medical Store Management System
         </div>
       </div>
     )
