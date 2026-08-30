@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/auth.store'
 const BASE_URL: string =
   (window as any)?.electronAPI?.serverUrl ||
   import.meta.env.VITE_API_URL ||
-  'http://localhost:3002/api'
+  'http://127.0.0.1:3002/api'
 
 export const api = axios.create({ baseURL: BASE_URL })
 

@@ -35,7 +35,7 @@ function writeConfig(cfg: AppConfig) {
   fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2), 'utf-8')
 }
 
-let globalServerUrl = 'http://localhost:3002/api'
+let globalServerUrl = 'http://127.0.0.1:3002/api'
 let serverProc: Electron.UtilityProcess | null = null
 let mariadbProc: ChildProcess | null = null
 

@@ -47,7 +47,7 @@ export default function SetupPage() {
     setSaving(true)
     try {
       const serverUrl = mode === 'single'
-        ? 'http://localhost:3002/api'
+        ? 'http://127.0.0.1:3002/api'
         : `http://${serverIp.trim()}:${serverPort}/api`
 
       if (eAPI?.restartWithConfig) {
@@ -118,7 +118,7 @@ export default function SetupPage() {
         </div>
 
         <div style={{ marginTop: 24, fontSize: 11, color: C.sub, textAlign: 'center' }}>
-          AbyteMedix v1.2.1 · Medical Store Management System
+          AbyteMedix v1.2.2 · Medical Store Management System
         </div>
       </div>
     )
