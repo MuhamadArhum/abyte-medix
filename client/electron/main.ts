@@ -19,8 +19,8 @@ interface AppConfig {
 
 const configPath = path.join(app.getPath('userData'), 'config.json')
 
-const MARIADB_PORT = 3307
-const BUNDLED_DB_URL = `mysql://root:@127.0.0.1:${MARIADB_PORT}/abyte_medix`
+const MARIADB_PORT_DEFAULT = 3307
+let activeMariaDbPort = MARIADB_PORT_DEFAULT
 
 // Search for system-installed MariaDB mysqld.exe in common Windows paths
 function findSystemMariaDb(): string | null {
@@ -118,14 +118,20 @@ function waitForPort(port: number, timeout = 90000): Promise<void> {
   })
 }
 
-async function isPortOpen(port: number): Promise<boolean> {
+function isPortBusy(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const sock = net.createConnection(port, '127.0.0.1')
-    sock.setTimeout(1000)
-    sock.on('connect', () => { sock.destroy(); resolve(true) })
-    sock.on('error', () => { sock.destroy(); resolve(false) })
-    sock.on('timeout', () => { sock.destroy(); resolve(false) })
+    const server = net.createServer()
+    server.once('error', () => resolve(true))
+    server.once('listening', () => { server.close(); resolve(false) })
+    server.listen(port, '127.0.0.1')
   })
+}
+
+async function findFreePort(start: number): Promise<number> {
+  for (let port = start; port < start + 20; port++) {
+    if (!(await isPortBusy(port))) return port
+  }
+  throw new Error(`No free port found in range ${start}–${start + 19}`)
 }
 
 async function startMariaDb(mysqldPath: string): Promise<void> {
@@ -133,11 +139,10 @@ async function startMariaDb(mysqldPath: string): Promise<void> {
   const mariadbDir = path.dirname(path.dirname(mysqldPath))
   const dataDir = getDataDir()
 
-  // If port already open, MariaDB is already running — skip spawn
-  const alreadyRunning = await isPortOpen(MARIADB_PORT)
-  if (alreadyRunning) {
-    console.log(`[MariaDB] Port ${MARIADB_PORT} already open — reusing existing instance`)
-    return
+  // Find a free port for MariaDB (skip ports occupied by other apps)
+  activeMariaDbPort = await findFreePort(MARIADB_PORT_DEFAULT)
+  if (activeMariaDbPort !== MARIADB_PORT_DEFAULT) {
+    console.log(`[MariaDB] Port ${MARIADB_PORT_DEFAULT} busy — using port ${activeMariaDbPort}`)
   }
 
   // Clean up stale .pid / lock files that block restart after a crash
@@ -189,14 +194,14 @@ async function startMariaDb(mysqldPath: string): Promise<void> {
   }
 
   // Start the server
-  console.log(`[MariaDB] Starting on port ${MARIADB_PORT}...`)
+  console.log(`[MariaDB] Starting on port ${activeMariaDbPort}...`)
   const serverLines: string[] = []
 
   await new Promise<void>((resolve, reject) => {
     mariadbProc = spawn(mysqldPath, [
       `--datadir=${dataDir}`,
       `--basedir=${mariadbDir}`,
-      `--port=${MARIADB_PORT}`,
+      `--port=${activeMariaDbPort}`,
       '--bind-address=127.0.0.1',
       '--console',
     ], { stdio: 'pipe' })
@@ -216,7 +221,7 @@ async function startMariaDb(mysqldPath: string): Promise<void> {
       reject(new Error(`MariaDB crashed (exit ${code}):\n${detail || 'No output captured'}`))
     })
 
-    waitForPort(MARIADB_PORT, 90000).then(resolve).catch((timeoutErr) => {
+    waitForPort(activeMariaDbPort, 90000).then(resolve).catch((timeoutErr) => {
       const detail = serverLines.slice(-15).join('\n')
       reject(new Error(`${timeoutErr.message}\n\nMariaDB output:\n${detail || 'No output captured'}`))
     })
@@ -248,7 +253,7 @@ function startServer(): Promise<boolean> {
       env: {
         ...process.env,
         NODE_ENV: 'production',
-        DATABASE_URL: BUNDLED_DB_URL,
+        DATABASE_URL: `mysql://root:@127.0.0.1:${activeMariaDbPort}/abyte_medix`,
         PORT: '3002',
         JWT_SECRET: 'abyte-medix-jwt-secret-2025',
         JWT_EXPIRES_IN: '15m',
@@ -411,7 +416,7 @@ async function bootstrap() {
           type: 'error',
           title: 'Database Failed to Start',
           message: 'MariaDB could not start.',
-          detail: `${e.message}${logTail}\n\nTroubleshooting:\n• Port ${MARIADB_PORT} may be in use by another app\n• Try restarting your PC\n• Re-install MariaDB if the issue persists`,
+          detail: `${e.message}${logTail}\n\nTroubleshooting:\n• App will automatically find a free port on retry\n• Try restarting your PC\n• Re-install MariaDB if the issue persists`,
           buttons: ['Retry', 'Exit'],
           defaultId: 0,
           cancelId: 1,
