@@ -118,10 +118,39 @@ function waitForPort(port: number, timeout = 90000): Promise<void> {
   })
 }
 
+async function isPortOpen(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const sock = net.createConnection(port, '127.0.0.1')
+    sock.setTimeout(1000)
+    sock.on('connect', () => { sock.destroy(); resolve(true) })
+    sock.on('error', () => { sock.destroy(); resolve(false) })
+    sock.on('timeout', () => { sock.destroy(); resolve(false) })
+  })
+}
+
 async function startMariaDb(mysqldPath: string): Promise<void> {
   // basedir = parent of bin/ directory
   const mariadbDir = path.dirname(path.dirname(mysqldPath))
   const dataDir = getDataDir()
+
+  // If port already open, MariaDB is already running — skip spawn
+  const alreadyRunning = await isPortOpen(MARIADB_PORT)
+  if (alreadyRunning) {
+    console.log(`[MariaDB] Port ${MARIADB_PORT} already open — reusing existing instance`)
+    return
+  }
+
+  // Clean up stale .pid / lock files that block restart after a crash
+  for (const staleFile of [
+    path.join(dataDir, 'mysqld.pid'),
+    path.join(dataDir, 'mariadbd.pid'),
+    path.join(dataDir, 'mysql.pid'),
+    path.join(dataDir, 'aria_log_control'),
+  ]) {
+    if (staleFile.endsWith('.pid') && fs.existsSync(staleFile)) {
+      try { fs.unlinkSync(staleFile); console.log('[MariaDB] Removed stale pid:', staleFile) } catch { /* ignore */ }
+    }
+  }
 
   // First-run: initialize data directory (insecure = no root password)
   if (!fs.existsSync(path.join(dataDir, 'mysql'))) {
@@ -368,11 +397,21 @@ async function bootstrap() {
       } catch (e: any) {
         console.error('[MariaDB] Failed to start:', e.message)
 
+        // Try to read MariaDB error log for more detail
+        const logPath = path.join(getDataDir(), 'mariadbd.err')
+        let logTail = ''
+        try {
+          if (fs.existsSync(logPath)) {
+            const lines = fs.readFileSync(logPath, 'utf-8').split('\n').filter(Boolean)
+            logTail = '\n\nMariaDB Log (last 5 lines):\n' + lines.slice(-5).join('\n')
+          }
+        } catch { /* ignore */ }
+
         const { response } = await dialog.showMessageBox({
           type: 'error',
           title: 'Database Failed to Start',
           message: 'MariaDB could not start.',
-          detail: `${e.message}\n\nMake sure MariaDB is properly installed and no other instance is blocking port ${MARIADB_PORT}.`,
+          detail: `${e.message}${logTail}\n\nTroubleshooting:\n• Port ${MARIADB_PORT} may be in use by another app\n• Try restarting your PC\n• Re-install MariaDB if the issue persists`,
           buttons: ['Retry', 'Exit'],
           defaultId: 0,
           cancelId: 1,
@@ -387,11 +426,12 @@ async function bootstrap() {
     }
 
     if (!mariaDbStarted) {
+      const dataDir = getDataDir()
       await dialog.showMessageBox({
         type: 'error',
         title: 'Cannot Start Database',
         message: 'AbyteMedix could not start the database after retrying.',
-        detail: 'Please make sure MariaDB is properly installed and try again.',
+        detail: `Steps to fix:\n1. Restart your PC and open AbyteMedix again\n2. Make sure no other app is using port ${MARIADB_PORT}\n3. If issue persists, delete the data folder and re-setup:\n   ${dataDir}\n4. Re-install MariaDB from mariadb.org if needed`,
         buttons: ['Exit'],
       })
       app.quit()
