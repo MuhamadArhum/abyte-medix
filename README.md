@@ -73,3 +73,60 @@ AbyteMedix
 ├── 💳 Payment Management
 ├── 📊 Reports & Analytics
 └── ⚙️ System Management
+```
+
+---
+
+## 📥 Installation
+
+### System Requirements
+
+- **OS:** Windows 10 / 11 (64-bit)
+- **RAM:** 4 GB minimum (8 GB recommended)
+- **Storage:** 500 MB free disk space
+- **Network:** LAN connection (for multi-PC setup)
+
+---
+
+### 🖥️ Single PC Setup
+
+1. Go to [**Releases**](https://github.com/MuhamadArhum/abyte-medix/releases/latest) and download **`AbyteMedix.Setup.x.x.x.exe`**
+2. Run the installer — Windows may show a SmartScreen warning, click **"More info" → "Run anyway"**
+3. Choose installation directory and click **Install**
+4. Launch **AbyteMedix** from the Desktop shortcut
+5. The app will automatically detect and start the database on first launch
+
+---
+
+### 🌐 LAN Multi-PC Setup (Server + Clients)
+
+AbyteMedix supports a **server-client architecture** over a local network — one PC acts as the server, others connect to it.
+
+#### Step 1 — Server PC
+
+1. Install AbyteMedix on the **main/server PC** using the steps above
+2. Launch the app — it will start the local database and API server
+3. Find the server PC's **local IP address**:
+   - Open Command Prompt → type `ipconfig`
+   - Note the **IPv4 Address** (e.g., `192.168.1.5`)
+
+#### Step 2 — Client PCs
+
+1. Install AbyteMedix on each **client PC** using the same installer
+2. On first launch, the app will show a **Server Connection** screen
+3. Enter the **Server IP** (e.g., `192.168.1.5`) and click Connect
+4. All client PCs will now share the same data from the server
+
+> **Note:** Make sure all PCs are connected to the **same LAN/WiFi network** and Windows Firewall allows AbyteMedix through.
+
+---
+
+## 🔄 Updates
+
+AbyteMedix supports **automatic updates**. When a new version is released, the app will notify you and download the update in the background.
+
+---
+
+## 📞 Support
+
+For issues or feature requests, open a ticket on [GitHub Issues](https://github.com/MuhamadArhum/abyte-medix/issues).
