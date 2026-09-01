@@ -22,6 +22,59 @@ const configPath = path.join(app.getPath('userData'), 'config.json')
 const MARIADB_PORT = 3307
 const BUNDLED_DB_URL = `mysql://root:@127.0.0.1:${MARIADB_PORT}/abyte_medix`
 
+// Search for system-installed MariaDB mysqld.exe in common Windows paths
+function findSystemMariaDb(): string | null {
+  const versions = [
+    '12.3', '12.2', '12.1',
+    '11.8', '11.7', '11.6', '11.5', '11.4', '11.3', '11.2', '11.1', '11.0',
+    '10.11', '10.6', '10.5', '10.4',
+  ]
+  const programFiles = [
+    process.env['ProgramFiles'] || 'C:\\Program Files',
+    process.env['ProgramW6432'] || 'C:\\Program Files',
+    process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)',
+  ]
+
+  const candidates: string[] = []
+
+  // Official MariaDB installer paths
+  for (const pf of programFiles) {
+    for (const v of versions) {
+      candidates.push(path.join(pf, `MariaDB ${v}`, 'bin', 'mysqld.exe'))
+    }
+  }
+
+  // XAMPP
+  candidates.push('C:\\xampp\\mysql\\bin\\mysqld.exe')
+
+  // WAMP / WAMP64 — scan subdirectories
+  for (const wampDir of ['C:\\wamp64\\bin\\mariadb', 'C:\\wamp\\bin\\mariadb']) {
+    if (fs.existsSync(wampDir)) {
+      try {
+        for (const sub of fs.readdirSync(wampDir)) {
+          candidates.push(path.join(wampDir, sub, 'bin', 'mysqld.exe'))
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  // Laragon
+  for (const lgDir of ['C:\\laragon\\bin\\mysql', 'C:\\laragon\\bin\\mariadb']) {
+    if (fs.existsSync(lgDir)) {
+      try {
+        for (const sub of fs.readdirSync(lgDir)) {
+          candidates.push(path.join(lgDir, sub, 'bin', 'mysqld.exe'))
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p
+  }
+  return null
+}
+
 function readConfig(): AppConfig | null {
   try {
     if (fs.existsSync(configPath)) {
@@ -38,13 +91,6 @@ function writeConfig(cfg: AppConfig) {
 let globalServerUrl = 'http://127.0.0.1:3002/api'
 let serverProc: Electron.UtilityProcess | null = null
 let mariadbProc: ChildProcess | null = null
-
-function getMariaDbDir(): string {
-  if (isDev) {
-    return path.join(app.getAppPath(), 'mariadb-bin')
-  }
-  return path.join(process.resourcesPath, 'mariadb-bin')
-}
 
 function getDataDir(): string {
   return path.join(app.getPath('userData'), 'mariadb-data')
@@ -72,14 +118,10 @@ function waitForPort(port: number, timeout = 90000): Promise<void> {
   })
 }
 
-async function startMariaDb(): Promise<void> {
-  const mariadbDir = getMariaDbDir()
-  const mysqldPath = path.join(mariadbDir, 'bin', 'mysqld.exe')
+async function startMariaDb(mysqldPath: string): Promise<void> {
+  // basedir = parent of bin/ directory
+  const mariadbDir = path.dirname(path.dirname(mysqldPath))
   const dataDir = getDataDir()
-
-  if (!fs.existsSync(mysqldPath)) {
-    throw new Error('MariaDB binary not found: ' + mysqldPath)
-  }
 
   // First-run: initialize data directory (insecure = no root password)
   if (!fs.existsSync(path.join(dataDir, 'mysql'))) {
@@ -281,20 +323,6 @@ function setupIPC() {
   })
 }
 
-async function showStartupError(title: string, detail: string, manualSteps: string[]) {
-  const stepsText = manualSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')
-  const { response } = await dialog.showMessageBox({
-    type: 'error',
-    title,
-    message: title,
-    detail: `${detail}\n\nManual Fix Steps:\n${stepsText}`,
-    buttons: ['Retry', 'Download VC++ Runtime', 'Exit'],
-    defaultId: 0,
-    cancelId: 2,
-  })
-  return response // 0=Retry, 1=Download, 2=Exit
-}
-
 async function bootstrap() {
   setupIPC()
 
@@ -309,35 +337,52 @@ async function bootstrap() {
   globalServerUrl = config.serverUrl
 
   if (config.mode === 'single') {
+    // Detect system-installed MariaDB
+    const mysqldPath = findSystemMariaDb()
+    if (!mysqldPath) {
+      const { response } = await dialog.showMessageBox({
+        type: 'error',
+        title: 'MariaDB Not Installed',
+        message: 'MariaDB database server was not found on this system.',
+        detail: 'AbyteMedix requires MariaDB to be installed before use.\n\nSteps:\n1. Click "Download MariaDB" below\n2. Install MariaDB (use default settings)\n3. Restart AbyteMedix after installation',
+        buttons: ['Download MariaDB', 'Exit'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+      if (response === 0) {
+        shell.openExternal('https://mariadb.org/download/?t=mariadb&o=true&p=mariadb')
+      }
+      app.quit()
+      return
+    }
+
+    console.log('[MariaDB] Found system installation:', mysqldPath)
+
     let mariaDbStarted = false
 
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        await startMariaDb()
+        await startMariaDb(mysqldPath)
         mariaDbStarted = true
         break
       } catch (e: any) {
         console.error('[MariaDB] Failed to start:', e.message)
 
-        const choice = await showStartupError(
-          'Database Failed to Start',
-          `MariaDB could not start.\n\n${e.message}\n\nIf the error mentions a missing DLL, install Microsoft Visual C++ 2015-2022 Redistributable (x64).`,
-          [
-            'Click "Download VC++ Runtime" below if a DLL error is shown',
-            'Install "VC_redist.x64.exe" and restart your PC',
-            'Re-open AbyteMedix after installation',
-          ],
-        )
+        const { response } = await dialog.showMessageBox({
+          type: 'error',
+          title: 'Database Failed to Start',
+          message: 'MariaDB could not start.',
+          detail: `${e.message}\n\nMake sure MariaDB is properly installed and no other instance is blocking port ${MARIADB_PORT}.`,
+          buttons: ['Retry', 'Exit'],
+          defaultId: 0,
+          cancelId: 1,
+        })
 
-        if (choice === 1) {
-          shell.openExternal('https://aka.ms/vs/17/release/vc_redist.x64.exe')
-          app.quit()
-          return
-        } else if (choice === 2) {
+        if (response === 1) {
           app.quit()
           return
         }
-        // choice === 0 → Retry next iteration
+        // response === 0 → Retry next iteration
       }
     }
 
@@ -346,7 +391,7 @@ async function bootstrap() {
         type: 'error',
         title: 'Cannot Start Database',
         message: 'AbyteMedix could not start the database after retrying.',
-        detail: 'Please install Microsoft Visual C++ 2015-2022 Redistributable (x64) and try again.',
+        detail: 'Please make sure MariaDB is properly installed and try again.',
         buttons: ['Exit'],
       })
       app.quit()

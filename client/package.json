@@ -1,14 +1,14 @@
 {
   "name": "abyte-medix-client",
   "private": true,
-  "version": "1.2.5",
+  "version": "1.2.6",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "electron:dev": "vite",
-    "electron:build": "node scripts/setup-mariadb.js && cd ../server && npm run build && cd ../client && tsc -b && vite build && npx esbuild electron/preload.ts --platform=node --format=cjs --bundle --external:electron --outfile=dist-electron/preload.cjs && electron-builder",
+    "electron:build": "cd ../server && npm run build && cd ../client && tsc -b && vite build && npx esbuild electron/preload.ts --platform=node --format=cjs --bundle --external:electron --outfile=dist-electron/preload.cjs && electron-builder",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -27,13 +27,6 @@
       {
         "from": "server-bundle",
         "to": "server-bundle",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "mariadb-bin",
-        "to": "mariadb-bin",
         "filter": [
           "**/*"
         ]
