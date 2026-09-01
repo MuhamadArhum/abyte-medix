@@ -113,11 +113,22 @@ AbyteMedix supports a **server-client architecture** over a local network — on
 #### Step 2 — Client PCs
 
 1. Install AbyteMedix on each **client PC** using the same installer
-2. On first launch, the app will show a **Server Connection** screen
-3. Enter the **Server IP** (e.g., `192.168.1.5`) and click Connect
-4. All client PCs will now share the same data from the server
+2. On first launch, a **Setup Wizard** will appear — select **"Connect to Server (LAN)"**
+3. Enter the **Server IP Address** (e.g., `192.168.1.5`) and **Port** (default: `3002`)
+4. Click **Connect** — the app will restart and connect to the server
+5. All client PCs will now share the same data from the server
 
 > **Note:** Make sure all PCs are connected to the **same LAN/WiFi network** and Windows Firewall allows AbyteMedix through.
+
+#### Changing Server IP Later
+
+If you need to change the server IP after setup:
+
+1. Open AbyteMedix → go to **Settings → Server Configuration**
+2. Update the **Server IP** and **Port**
+3. Click **Save** — the app will restart with the new configuration
+
+> Config is saved at: `C:\Users\<username>\AppData\Roaming\AbyteMedix\config.json`
 
 ---
 
