@@ -134,16 +134,32 @@ async function findFreePort(start: number): Promise<number> {
   throw new Error(`No free port found in range ${start}–${start + 19}`)
 }
 
+// Check if a MariaDB/MySQL instance is already listening on common ports
+async function findRunningMariaDb(): Promise<number | null> {
+  for (const port of [3306, 3307, 3308]) {
+    if (!(await isPortBusy(port))) continue  // port is free = nothing running there
+    console.log(`[MariaDB] Detected existing instance on port ${port}`)
+    return port
+  }
+  return null
+}
+
 async function startMariaDb(mysqldPath: string): Promise<void> {
   // basedir = parent of bin/ directory
   const mariadbDir = path.dirname(path.dirname(mysqldPath))
   const dataDir = getDataDir()
 
-  // Find a free port for MariaDB (skip ports occupied by other apps)
-  activeMariaDbPort = await findFreePort(MARIADB_PORT_DEFAULT)
-  if (activeMariaDbPort !== MARIADB_PORT_DEFAULT) {
-    console.log(`[MariaDB] Port ${MARIADB_PORT_DEFAULT} busy — using port ${activeMariaDbPort}`)
+  // If MariaDB already running on a common port, reuse it — don't spawn a new instance
+  const runningPort = await findRunningMariaDb()
+  if (runningPort !== null) {
+    activeMariaDbPort = runningPort
+    console.log(`[MariaDB] Reusing existing instance on port ${activeMariaDbPort}`)
+    return
   }
+
+  // No running instance found — find a free port and spawn
+  activeMariaDbPort = await findFreePort(MARIADB_PORT_DEFAULT)
+  console.log(`[MariaDB] Spawning new instance on port ${activeMariaDbPort}`)
 
   // Clean up stale .pid / lock files that block restart after a crash
   for (const staleFile of [
