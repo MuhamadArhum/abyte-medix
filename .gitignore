@@ -22,3 +22,10 @@ client/release/
 
 # Seed scripts (local only)
 server/seed*.ts
+
+# MariaDB binaries (too large for GitHub, bundled at build time)
+client/mariadb-bin/
+
+# Claude Code internal files
+.claude/worktrees/
+.claude/settings.local.json
