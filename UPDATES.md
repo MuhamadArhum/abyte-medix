@@ -22,6 +22,11 @@
 | 12 | **Sale.shiftId index added** — Missing index on `Sale.shiftId` causes full table scan on shift-close summary. Now indexed. | 🟡 P2 Performance |
 | 13 | **Batch unique constraint added** — `@@unique([medicineId, batchNumber])` prevents duplicate batch numbers for the same medicine. | 🟡 P2 Data Integrity |
 | 14 | **Password minimum raised to 8 chars** — `create` and `resetPassword` now require ≥ 8 characters (was 6). | 🟡 P2 Security |
+| 15 | **Credit limit enforced at sale** — `createSale` now rejects CREDIT/SPLIT sales that would push a customer over their credit limit. Previously only a `creditCheck` endpoint existed but was not called at sale creation. | 🔴 P0 Bug |
+| 16 | **Damaged return audit trail fixed** — `SALE_RETURN` stock movement for damaged items was recording `quantity: 0`. Now records `-item.quantity` (negative = writeoff) so stock audit trail is complete. | 🟠 P1 Bug |
+| 17 | **P&L sale returns deducted** — `profitLoss` report now subtracts `SaleReturn.refundAmount` from revenue. Previously sale returns were invisible to the P&L. Added `grossRevenue` and `saleReturns` fields to response. | 🟠 P1 Bug |
+| 18 | **Dashboard NaN fixed** — Stock value calculation guarded against null `purchaseRate`/`saleRate` with `?? 0` fallback. | 🟠 P1 Bug |
+| 19 | **Ledger race condition removed** — `getLedger` (customers & suppliers) was doing a non-transactional read-calculate-write to sync the stored balance. A concurrent payment could be silently overwritten. Removed the sync write; all balance mutations are already atomic. | 🟠 P1 Bug |
 
 ---
 
