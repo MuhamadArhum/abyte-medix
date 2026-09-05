@@ -218,14 +218,23 @@ export class ReportsService {
       },
     })
 
+    const returnWhere: any = {}
+    if (dr) returnWhere.createdAt = dr
+    const saleReturnsAgg = await this.prisma.saleReturn.aggregate({
+      where: returnWhere,
+      _sum: { refundAmount: true },
+    })
+    const saleReturnsTotal = Number(saleReturnsAgg._sum.refundAmount ?? 0)
+
     let revenue = 0
     let cogs = 0
     for (const s of sales) {
       revenue += Number(s.total)
       for (const item of s.items) {
-        cogs += item.quantity * Number(item.batch.purchaseRate)
+        cogs += item.quantity * Number(item.batch.purchaseRate ?? 0)
       }
     }
+    revenue -= saleReturnsTotal
 
     const grossProfit = revenue - cogs
     const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0
@@ -252,6 +261,8 @@ export class ReportsService {
 
     return {
       period: { from: from ?? null, to: to ?? null },
+      grossRevenue: r(revenue + saleReturnsTotal),
+      saleReturns: r(saleReturnsTotal),
       revenue: r(revenue),
       cogs: r(cogs),
       grossProfit: r(grossProfit),

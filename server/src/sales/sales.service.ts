@@ -68,11 +68,21 @@ export class SalesService {
       }
     }
 
-    // Validate customer is active for credit/split payments
+    // Validate customer is active and within credit limit for credit/split payments
     if (dto.customerId && (dto.paymentMethod === 'CREDIT' || dto.paymentMethod === 'SPLIT')) {
       const customer = await this.prisma.customer.findUnique({ where: { id: dto.customerId } })
       if (!customer) throw new NotFoundException('Customer not found')
       if (!customer.isActive) throw new BadRequestException('Customer account is inactive')
+      const creditPortion = dto.total - dto.amountPaid
+      if (creditPortion > 0) {
+        const creditLimit = Number(customer.creditLimit)
+        const outstanding = Number(customer.outstandingBalance)
+        if (creditLimit > 0 && outstanding + creditPortion > creditLimit) {
+          throw new BadRequestException(
+            `Credit limit exceeded. Limit: Rs. ${creditLimit.toFixed(2)}, Outstanding: Rs. ${outstanding.toFixed(2)}, Requested: Rs. ${creditPortion.toFixed(2)}`,
+          )
+        }
+      }
     }
 
     const invoiceNumber = await this.generateInvoiceNumber()
@@ -255,7 +265,7 @@ export class SalesService {
           data: {
             batchId: item.batchId,
             type: MovementType.SALE_RETURN,
-            quantity: item.isDamaged ? 0 : item.quantity,
+            quantity: item.isDamaged ? -item.quantity : item.quantity,
             referenceId: saleReturn.id,
             reason: dto.reason,
           },

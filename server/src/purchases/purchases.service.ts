@@ -66,7 +66,7 @@ export class PurchasesService {
             const total = Number(dto.total)
             if (paid >= total) return PurchaseStatus.RECEIVED
             if (paid > 0) return PurchaseStatus.PARTIAL
-            return PurchaseStatus.RECEIVED
+            return PurchaseStatus.DRAFT  // unpaid = DRAFT, not RECEIVED
           })(),
           subtotal: dto.subtotal,
           discountAmount: dto.discountAmount ?? 0,

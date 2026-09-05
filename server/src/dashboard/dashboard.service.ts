@@ -71,8 +71,8 @@ export class DashboardService {
       (m) => m.batches.reduce((sum, b) => sum + b.quantity, 0) <= lowStockThreshold,
     ).length
 
-    const atCost = batches.reduce((sum, b) => sum + b.quantity * Number(b.purchaseRate), 0)
-    const atSalePrice = batches.reduce((sum, b) => sum + b.quantity * Number(b.saleRate), 0)
+    const atCost = batches.reduce((sum, b) => sum + b.quantity * Number(b.purchaseRate ?? 0), 0)
+    const atSalePrice = batches.reduce((sum, b) => sum + b.quantity * Number(b.saleRate ?? 0), 0)
 
     const base = {
       todaySales: {
