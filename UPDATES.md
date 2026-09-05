@@ -2,6 +2,29 @@
 
 ---
 
+## v1.3.0 — 2026-09-05 — Security & Stability Audit Fixes
+
+### ✅ Completed
+
+| # | Fix | Category |
+|---|-----|----------|
+| 1 | **Hardcoded JWT/License secrets removed** — Secrets now auto-generated on first boot using `crypto.randomBytes` and stored in `%AppData%/AbyteMedix/secrets.json`. Each install has unique secrets; no more baked-in keys. | 🔴 P0 Security |
+| 2 | **CORS restricted** — `origin: true` replaced with explicit localhost allowlist. Prevents cross-origin credential theft. | 🔴 P0 Security |
+| 3 | **Swagger docs hidden in production** — `/api/docs` only mounted in `NODE_ENV=development`. Removes information disclosure vector. | 🔴 P0 Security |
+| 4 | **Settings whitelist enforced** — `upsertMany` now filters keys against the known `DEFAULTS` list; arbitrary keys silently ignored. | 🔴 P0 Security |
+| 5 | **Sale validation added** — `quantity <= 0` and `saleRate < 0` now throw `BadRequestException`. Customer active-status checked before credit sales. | 🔴 P0 Security |
+| 6 | **Refresh token rotation** — On every `/auth/refresh` call, old token is revoked and a new one issued. Client stores the rotated token. Inactive users are rejected. | 🟠 P1 Security |
+| 7 | **MariaDB lock-file cleanup fixed** — `aria_log_control` was silently skipped due to `.pid` guard. Now all stale files removed on startup after crash. | 🟠 P1 Stability |
+| 8 | **BigInt serialization fixed** — `BigInt.toJSON` now returns `string` instead of `Number` (was lossy for values > 2^53). | 🟠 P1 Bug |
+| 9 | **Shift: concurrent open race condition fixed** — `openShift` wrapped in `$transaction` so two terminals cannot create two open shifts simultaneously. | 🟠 P1 Bug |
+| 10 | **Shift: duplicated calculation extracted** — `calculateShiftTotals()` private method replaces 3× copy-pasted reduce chains in `getCurrentShift`, `closeShift`, `getShiftSummary`. | 🟡 P2 Quality |
+| 11 | **ShiftStatus enum added to schema** — `Shift.status` changed from `String @db.VarChar(10)` to proper `ShiftStatus` enum. `OPEN`/`CLOSED` now enforced at DB level. | 🟡 P2 Quality |
+| 12 | **Sale.shiftId index added** — Missing index on `Sale.shiftId` causes full table scan on shift-close summary. Now indexed. | 🟡 P2 Performance |
+| 13 | **Batch unique constraint added** — `@@unique([medicineId, batchNumber])` prevents duplicate batch numbers for the same medicine. | 🟡 P2 Data Integrity |
+| 14 | **Password minimum raised to 8 chars** — `create` and `resetPassword` now require ≥ 8 characters (was 6). | 🟡 P2 Security |
+
+---
+
 ## v1.2.1 — 2026-08-30
 
 ### ✅ Completed

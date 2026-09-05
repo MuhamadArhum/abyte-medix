@@ -20,7 +20,7 @@ export class UsersService {
   }, actorId?: number) {
     if (!dto.username?.trim()) throw new BadRequestException('Username is required')
     if (!dto.fullName?.trim()) throw new BadRequestException('Full name is required')
-    if (!dto.password || dto.password.length < 6) throw new BadRequestException('Password must be at least 6 characters')
+    if (!dto.password || dto.password.length < 8) throw new BadRequestException('Password must be at least 8 characters')
 
     const exists = await this.prisma.user.findUnique({ where: { username: dto.username } })
     if (exists) throw new ConflictException('Username already taken')
@@ -70,7 +70,7 @@ export class UsersService {
   }
 
   async resetPassword(id: number, newPassword: string, actorId?: number) {
-    if (!newPassword || newPassword.length < 6) throw new BadRequestException('Password must be at least 6 characters')
+    if (!newPassword || newPassword.length < 8) throw new BadRequestException('Password must be at least 8 characters')
     await this.findOne(id)
     const passwordHash = await bcrypt.hash(newPassword, 12)
     await this.prisma.user.update({ where: { id }, data: { passwordHash } })

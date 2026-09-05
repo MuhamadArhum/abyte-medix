@@ -124,7 +124,7 @@ const TABLES: string[] = [
     \`closedAt\` DATETIME(3) NULL,
     \`openingBalance\` DECIMAL(12,2) NOT NULL DEFAULT 0,
     \`closingBalance\` DECIMAL(12,2) NULL,
-    \`status\` VARCHAR(10) NOT NULL DEFAULT 'OPEN',
+    \`status\` ENUM('OPEN','CLOSED') NOT NULL DEFAULT 'OPEN',
     \`notes\` TEXT NULL,
     \`openedById\` INT NOT NULL,
     \`closedById\` INT NULL,

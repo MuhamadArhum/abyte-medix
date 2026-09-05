@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { MovementType, SaleStatus } from '@prisma/client'
+import { MovementType, SaleStatus, ShiftStatus } from '@prisma/client'
 
 interface SaleItemDto {
   batchId: number
@@ -56,8 +56,11 @@ export class SalesService {
   }
 
   async createSale(dto: CreateSaleDto) {
-    // Validate batch quantities before transaction
+    // Validate all items and batch availability before opening a transaction
     for (const item of dto.items) {
+      if (item.quantity <= 0) throw new BadRequestException(`Quantity must be > 0 for batch ${item.batchId}`)
+      if (item.saleRate < 0) throw new BadRequestException(`Sale rate cannot be negative for batch ${item.batchId}`)
+
       const batch = await this.prisma.batch.findUnique({ where: { id: item.batchId } })
       if (!batch) throw new NotFoundException(`Batch ${item.batchId} not found`)
       if (batch.quantity < item.quantity) {
@@ -65,11 +68,18 @@ export class SalesService {
       }
     }
 
+    // Validate customer is active for credit/split payments
+    if (dto.customerId && (dto.paymentMethod === 'CREDIT' || dto.paymentMethod === 'SPLIT')) {
+      const customer = await this.prisma.customer.findUnique({ where: { id: dto.customerId } })
+      if (!customer) throw new NotFoundException('Customer not found')
+      if (!customer.isActive) throw new BadRequestException('Customer account is inactive')
+    }
+
     const invoiceNumber = await this.generateInvoiceNumber()
 
     return this.prisma.$transaction(async (tx) => {
       // Look up current open shift to link sale
-      const currentShift = await tx.shift.findFirst({ where: { status: 'OPEN' }, orderBy: { openedAt: 'desc' } })
+      const currentShift = await tx.shift.findFirst({ where: { status: ShiftStatus.OPEN }, orderBy: { openedAt: 'desc' } })
 
       // Create sale
       const sale = await tx.sale.create({

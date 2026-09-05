@@ -7,6 +7,7 @@ import { spawn } from 'child_process'
 import type { ChildProcess } from 'child_process'
 import { fileURLToPath } from 'url'
 import { autoUpdater } from 'electron-updater'
+import crypto from 'crypto'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -18,6 +19,30 @@ interface AppConfig {
 }
 
 const configPath = path.join(app.getPath('userData'), 'config.json')
+const secretsPath = path.join(app.getPath('userData'), 'secrets.json')
+
+interface AppSecrets {
+  jwtSecret: string
+  refreshSecret: string
+  licenseSecret: string
+}
+
+function loadOrCreateSecrets(): AppSecrets {
+  try {
+    if (fs.existsSync(secretsPath)) {
+      const s = JSON.parse(fs.readFileSync(secretsPath, 'utf-8')) as AppSecrets
+      if (s.jwtSecret && s.refreshSecret && s.licenseSecret) return s
+    }
+  } catch { /* regenerate */ }
+
+  const secrets: AppSecrets = {
+    jwtSecret: crypto.randomBytes(48).toString('hex'),
+    refreshSecret: crypto.randomBytes(48).toString('hex'),
+    licenseSecret: crypto.randomBytes(32).toString('hex'),
+  }
+  fs.writeFileSync(secretsPath, JSON.stringify(secrets, null, 2), { encoding: 'utf-8', mode: 0o600 })
+  return secrets
+}
 
 const MARIADB_PORT_DEFAULT = 3307
 let activeMariaDbPort = MARIADB_PORT_DEFAULT
@@ -162,14 +187,15 @@ async function startMariaDb(mysqldPath: string): Promise<void> {
   console.log(`[MariaDB] Spawning new instance on port ${activeMariaDbPort}`)
 
   // Clean up stale .pid / lock files that block restart after a crash
-  for (const staleFile of [
+  const staleFiles = [
     path.join(dataDir, 'mysqld.pid'),
     path.join(dataDir, 'mariadbd.pid'),
     path.join(dataDir, 'mysql.pid'),
     path.join(dataDir, 'aria_log_control'),
-  ]) {
-    if (staleFile.endsWith('.pid') && fs.existsSync(staleFile)) {
-      try { fs.unlinkSync(staleFile); console.log('[MariaDB] Removed stale pid:', staleFile) } catch { /* ignore */ }
+  ]
+  for (const staleFile of staleFiles) {
+    if (fs.existsSync(staleFile)) {
+      try { fs.unlinkSync(staleFile); console.log('[MariaDB] Removed stale file:', path.basename(staleFile)) } catch { /* ignore */ }
     }
   }
 
@@ -265,17 +291,18 @@ function startServer(): Promise<boolean> {
     let resolved = false
     const done = (ok: boolean) => { if (!resolved) { resolved = true; resolve(ok) } }
 
+    const secrets = loadOrCreateSecrets()
     serverProc = utilityProcess.fork(bundlePath, [], {
       env: {
         ...process.env,
         NODE_ENV: 'production',
         DATABASE_URL: `mysql://root:@127.0.0.1:${activeMariaDbPort}/abyte_medix`,
         PORT: '3002',
-        JWT_SECRET: 'abyte-medix-jwt-secret-2025',
+        JWT_SECRET: secrets.jwtSecret,
         JWT_EXPIRES_IN: '15m',
-        REFRESH_TOKEN_SECRET: 'abyte-medix-refresh-secret-2025',
+        REFRESH_TOKEN_SECRET: secrets.refreshSecret,
         REFRESH_TOKEN_EXPIRES_IN: '7d',
-        LICENSE_SECRET: 'abyte-medix-license-secret-@2025#do-not-share',
+        LICENSE_SECRET: secrets.licenseSecret,
       },
       stdio: 'pipe',
     })

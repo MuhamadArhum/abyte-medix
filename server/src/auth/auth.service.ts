@@ -55,9 +55,27 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token')
     }
 
+    if (!stored.user.isActive) {
+      throw new UnauthorizedException('User account is inactive')
+    }
+
     const payload = { sub: stored.user.id, username: stored.user.username, role: stored.user.role }
     const accessToken = this.jwt.sign(payload)
-    return { accessToken }
+
+    // Rotate refresh token — revoke old, issue new
+    const newRefreshToken = this.jwt.sign(payload, {
+      secret: this.config.get('REFRESH_TOKEN_SECRET'),
+      expiresIn: this.config.get('REFRESH_TOKEN_EXPIRES_IN', '7d'),
+    })
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7)
+
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } }),
+      this.prisma.refreshToken.create({ data: { token: newRefreshToken, userId: stored.user.id, expiresAt } }),
+    ])
+
+    return { accessToken, refreshToken: newRefreshToken }
   }
 
   async logout(refreshToken: string) {

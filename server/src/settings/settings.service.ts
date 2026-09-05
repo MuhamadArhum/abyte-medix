@@ -37,14 +37,17 @@ export class SettingsService {
   }
 
   async upsertMany(data: Record<string, string>) {
+    const allowed = Object.keys(DEFAULTS)
     const results = await Promise.all(
-      Object.entries(data).map(([key, value]) =>
-        this.prisma.setting.upsert({
-          where: { key },
-          update: { value },
-          create: { key, value },
-        }),
-      ),
+      Object.entries(data)
+        .filter(([key]) => allowed.includes(key))
+        .map(([key, value]) =>
+          this.prisma.setting.upsert({
+            where: { key },
+            update: { value },
+            create: { key, value },
+          }),
+        ),
     )
     return results
   }
