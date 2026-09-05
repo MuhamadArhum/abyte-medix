@@ -47,7 +47,28 @@ function loadOrCreateSecrets(): AppSecrets {
 const MARIADB_PORT_DEFAULT = 3307
 let activeMariaDbPort = MARIADB_PORT_DEFAULT
 
-// Search for system-installed MariaDB mysqld.exe in common Windows paths
+// Use bundled MariaDB (inside app resources) — works without any system installation
+function findBundledMariaDb(): string | null {
+  const candidates = isDev
+    ? [
+        path.join(__dirname, '../mariadb-bin/bin/mysqld.exe'),
+        path.join(__dirname, '../mariadb-bin/bin/mariadbd.exe'),
+      ]
+    : [
+        path.join(process.resourcesPath, 'mariadb-bin', 'bin', 'mysqld.exe'),
+        path.join(process.resourcesPath, 'mariadb-bin', 'bin', 'mariadbd.exe'),
+      ]
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      console.log('[MariaDB] Using bundled binary:', p)
+      return p
+    }
+  }
+  return null
+}
+
+// Search for system-installed MariaDB mysqld.exe in common Windows paths (fallback)
 function findSystemMariaDb(): string | null {
   const versions = [
     '12.3', '12.2', '12.1',
@@ -414,26 +435,21 @@ async function bootstrap() {
   globalServerUrl = config.serverUrl
 
   if (config.mode === 'single') {
-    // Detect system-installed MariaDB
-    const mysqldPath = findSystemMariaDb()
+    // Bundled MariaDB first → system fallback
+    const mysqldPath = findBundledMariaDb() ?? findSystemMariaDb()
     if (!mysqldPath) {
-      const { response } = await dialog.showMessageBox({
+      dialog.showMessageBox({
         type: 'error',
-        title: 'MariaDB Not Installed',
-        message: 'MariaDB database server was not found on this system.',
-        detail: 'AbyteMedix requires MariaDB to be installed before use.\n\nSteps:\n1. Click "Download MariaDB" below\n2. Install MariaDB (use default settings)\n3. Restart AbyteMedix after installation',
-        buttons: ['Download MariaDB', 'Exit'],
-        defaultId: 0,
-        cancelId: 1,
+        title: 'Database Not Found',
+        message: 'Could not locate the database engine.',
+        detail: 'This should not happen with a normal installation. Try reinstalling AbyteMedix.',
+        buttons: ['OK'],
       })
-      if (response === 0) {
-        shell.openExternal('https://mariadb.org/download/?t=mariadb&o=true&p=mariadb')
-      }
       app.quit()
       return
     }
 
-    console.log('[MariaDB] Found system installation:', mysqldPath)
+    console.log('[MariaDB] Using:', mysqldPath)
 
     let mariaDbStarted = false
 
@@ -479,7 +495,7 @@ async function bootstrap() {
         type: 'error',
         title: 'Cannot Start Database',
         message: 'AbyteMedix could not start the database after retrying.',
-        detail: `Steps to fix:\n1. Restart your PC and open AbyteMedix again\n2. Make sure no other app is using port ${MARIADB_PORT}\n3. If issue persists, delete the data folder and re-setup:\n   ${dataDir}\n4. Re-install MariaDB from mariadb.org if needed`,
+        detail: `Steps to fix:\n1. Restart your PC and open AbyteMedix again\n2. Make sure no other app is using port ${activeMariaDbPort}\n3. If issue persists, delete the data folder and re-setup:\n   ${dataDir}\n4. Re-install AbyteMedix if problem continues`,
         buttons: ['Exit'],
       })
       app.quit()
