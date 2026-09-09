@@ -8,6 +8,8 @@ import Table, { type Column } from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
 import SearchInput from '../../components/ui/SearchInput'
 import Badge from '../../components/ui/Badge'
+import PrintA4, { type SaleReceiptData } from '../../components/ui/PrintA4'
+import PrintThermal from '../../components/ui/PrintThermal'
 
 function KbdTag({ children }: { children: React.ReactNode }) {
   return (
@@ -65,7 +67,7 @@ function fmtRs(n: number | string) { return 'Rs ' + Math.round(Number(n) || 0).t
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }) }
 function fmtTime(d: string) { return new Date(d).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' }) }
 
-function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClose: () => void; storeName: string }) {
+function SaleDetailModal({ saleId, onClose, storeName, storeAddress, storePhone }: { saleId: number; onClose: () => void; storeName: string; storeAddress?: string; storePhone?: string }) {
   const qc = useQueryClient()
   const { data, isLoading } = useQuery<SaleDetail>({
     queryKey: ['sale-detail', saleId],
@@ -75,6 +77,8 @@ function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClo
   const [returnReason, setReturnReason] = useState('')
   const [returnMethod, setReturnMethod] = useState('CASH')
   const [returnQtys, setReturnQtys] = useState<Record<number, number>>({})
+  const [printMode, setPrintMode] = useState<'a4' | 'thermal'>('a4')
+  const [printData, setPrintData] = useState<SaleReceiptData | null>(null)
 
   const returnMutation = useMutation({
     mutationFn: () => {
@@ -156,52 +160,28 @@ function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClo
   )
 
   const printSale = (s: SaleDetail) => {
-    const win = window.open('', '_blank', 'width=800,height=900')
-    if (!win) return
-    const rows = s.items.map(i => `
-      <tr>
-        <td>${i.batch.medicine.brandName} ${i.batch.medicine.strength}</td>
-        <td style="text-align:center">${i.batch.batchNumber}</td>
-        <td style="text-align:right">${i.quantity}</td>
-        <td style="text-align:right">Rs ${Number(i.saleRate).toLocaleString()}</td>
-        <td style="text-align:right">${i.discount > 0 ? i.discount + '%' : '—'}</td>
-        <td style="text-align:right">Rs ${Math.round(Number(i.total)).toLocaleString()}</td>
-      </tr>`).join('')
-    win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${s.invoiceNumber}</title>
-    <style>
-      body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 0; padding: 20mm 18mm; }
-      .header { text-align: center; border-bottom: 2px solid #D9A441; padding-bottom: 10px; margin-bottom: 14px; }
-      h1 { font-size: 18px; margin: 0; }
-      .meta { display: flex; justify-content: space-between; margin-bottom: 14px; font-size: 11px; }
-      table { width: 100%; border-collapse: collapse; font-size: 11px; }
-      th { background: #2B2F33; color: #fff; padding: 6px 8px; text-align: left; }
-      td { padding: 6px 8px; border-bottom: 1px solid #eee; }
-      .totals { margin-top: 12px; text-align: right; font-size: 12px; }
-      .total-row { font-size: 15px; font-weight: bold; color: #D9A441; margin-top: 6px; }
-      @media print { body { padding: 10mm; } }
-    </style></head><body>
-    <div class="header"><h1>${storeName}</h1><div style="color:#555">SALES INVOICE</div></div>
-    <div class="meta">
-      <div><b>Invoice #:</b> ${s.invoiceNumber}<br><b>Date:</b> ${fmtDate(s.createdAt)}<br><b>Time:</b> ${fmtTime(s.createdAt)}</div>
-      <div><b>Customer:</b> ${s.customer?.name ?? 'Walk-in'}<br>${s.customer?.phone ? '<b>Phone:</b> ' + s.customer.phone : ''}</div>
-    </div>
-    <table>
-      <thead><tr><th>Medicine</th><th>Batch</th><th>Qty</th><th>Rate</th><th>Disc</th><th>Amount</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="totals">
-      ${Number(s.discountAmount) > 0 ? `<div>Subtotal: Rs ${Math.round(Number(s.subtotal)).toLocaleString()}</div>` : ''}
-      ${Number(s.discountAmount) > 0 ? `<div>Discount: -Rs ${Math.round(Number(s.discountAmount)).toLocaleString()}</div>` : ''}
-      ${Number(s.taxAmount) > 0 ? `<div>Tax: Rs ${Math.round(Number(s.taxAmount)).toLocaleString()}</div>` : ''}
-      <div class="total-row">Total: Rs ${Math.round(Number(s.total)).toLocaleString()}</div>
-      <div>Paid: Rs ${Math.round(Number(s.amountPaid)).toLocaleString()} (${s.paymentMethod})</div>
-      ${s.paymentMethod === 'CASH' ? `<div>Change: Rs ${Math.round(Number(s.changeAmount)).toLocaleString()}</div>` : ''}
-    </div>
-    ${s.notes ? `<div style="margin-top:12px;font-size:11px;color:#555"><b>Notes:</b> ${s.notes}</div>` : ''}
-    <div style="margin-top:30px;text-align:center;font-size:11px;color:#888">Thank you — get well soon!</div>
-    <script>window.onload=function(){window.print();window.close()}</script>
-    </body></html>`)
-    win.document.close()
+    setPrintData({
+      invoiceNumber: s.invoiceNumber,
+      date: new Date(s.createdAt),
+      customerName: s.customer?.name ?? 'Walk-in',
+      lines: s.items.map(i => ({
+        medicineName: `${i.batch.medicine.brandName} ${i.batch.medicine.strength}`.trim(),
+        qty: i.quantity,
+        saleRate: Number(i.saleRate),
+        total: Number(i.total),
+      })),
+      subtotal: Number(s.subtotal),
+      discountAmt: Number(s.discountAmount),
+      taxAmt: Number(s.taxAmount),
+      total: Number(s.total),
+      paid: Number(s.amountPaid),
+      change: Number(s.changeAmount),
+      paymentMethod: s.paymentMethod,
+      storeName,
+      storeAddress,
+      storePhone,
+    })
+    setTimeout(() => window.print(), 120)
   }
 
   return (
@@ -242,7 +222,18 @@ function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClo
                   borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff',
                   color: C.text, fontWeight: 600, fontSize: 12, cursor: 'pointer',
                 }}>
-                  <Printer size={13} /> Print
+                  <Printer size={13} /> {printMode === 'thermal' ? 'Print (Thermal)' : 'Print (A4)'}
+                </button>
+                <button
+                  onClick={() => setPrintMode(m => m === 'a4' ? 'thermal' : 'a4')}
+                  title={`Switch to ${printMode === 'a4' ? 'Thermal (58mm)' : 'A4'}`}
+                  style={{
+                    padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.border}`,
+                    background: '#fff', color: C.subtext, fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {printMode === 'a4' ? '58mm' : 'A4'}
                 </button>
               </>
             )}
@@ -331,6 +322,13 @@ function SaleDetailModal({ saleId, onClose, storeName }: { saleId: number; onClo
           </div>
         )}
       </div>
+
+      {printData && printMode === 'a4' && (
+        <PrintA4 type="sale" data={printData} onAfterPrint={() => setPrintData(null)} />
+      )}
+      {printData && printMode === 'thermal' && (
+        <PrintThermal data={printData} onAfterPrint={() => setPrintData(null)} />
+      )}
     </div>
   )
 }
@@ -343,6 +341,8 @@ export default function SalesPage() {
     staleTime: 5 * 60 * 1000,
   })
   const storeName = settings?.store_name || 'AbyteMedix Pharmacy'
+  const storeAddress = settings?.store_address || undefined
+  const storePhone = settings?.store_phone || undefined
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(25)
   const [search, setSearch] = useState('')
@@ -470,7 +470,7 @@ export default function SalesPage() {
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
-      {viewSaleId && <SaleDetailModal saleId={viewSaleId} onClose={() => setViewSaleId(null)} storeName={storeName} />}
+      {viewSaleId && <SaleDetailModal saleId={viewSaleId} onClose={() => setViewSaleId(null)} storeName={storeName} storeAddress={storeAddress} storePhone={storePhone} />}
 
       <div style={{
         position: 'fixed', bottom: 0, left: 200, right: 0, height: 32,

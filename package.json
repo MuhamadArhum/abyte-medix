@@ -2,7 +2,10 @@
   "name": "abyte-medix",
   "version": "1.1.0",
   "private": true,
-  "workspaces": ["server", "client"],
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
     "server": "npm run start:dev --workspace=server",
     "client": "npm run dev --workspace=client",
@@ -11,5 +14,13 @@
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
+  },
+  "allowScripts": {
+    "electron-winstaller": true,
+    "@scarf/scarf@1.4.0": true,
+    "esbuild@0.28.2": true,
+    "@prisma/engines": true,
+    "prisma": true,
+    "unrs-resolver": true
   }
 }

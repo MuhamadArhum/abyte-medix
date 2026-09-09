@@ -2,6 +2,16 @@
 
 ---
 
+## v1.3.1 — 2026-09-09 — Sales History Printing
+
+### ✅ Completed
+
+| # | Fix | Category |
+|---|-----|----------|
+| 1 | **A4 + Thermal printing in Sales History** — The "reprint" flow on the Sales History page used a separate, A4-only, hand-built HTML print window. Replaced with the same shared `PrintA4` / `PrintThermal` components used by POS, with an A4 ↔ Thermal (58mm) toggle. Store address/phone (from Settings) now also appear on the reprinted invoice. | 🟡 P2 Feature Parity |
+
+---
+
 ## v1.3.0 — 2026-09-05 — Security & Stability Audit Fixes
 
 ### ✅ Completed
