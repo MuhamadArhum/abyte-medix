@@ -116,12 +116,12 @@ export default function InventoryPage() {
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => api.get('/medicines/categories').then(r => r.data),
+    queryFn: () => api.get('/categories').then(r => r.data),
   })
 
   const { data: manufacturersData } = useQuery({
     queryKey: ['manufacturers'],
-    queryFn: () => api.get('/medicines/manufacturers').then(r => r.data),
+    queryFn: () => api.get('/manufacturers').then(r => r.data),
   })
 
   const { data: movData, isLoading: movLoading } = useQuery({

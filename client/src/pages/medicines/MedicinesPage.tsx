@@ -56,11 +56,11 @@ export default function MedicinesPage() {
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => api.get('/medicines/categories').then(r => r.data),
+    queryFn: () => api.get('/categories').then(r => r.data),
   })
   const { data: manufacturersData } = useQuery({
     queryKey: ['manufacturers'],
-    queryFn: () => api.get('/medicines/manufacturers').then(r => r.data),
+    queryFn: () => api.get('/manufacturers').then(r => r.data),
   })
   const categories: { id: number; name: string }[] = categoriesData ?? []
   const manufacturers: { id: number; name: string }[] = manufacturersData ?? []

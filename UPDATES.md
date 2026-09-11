@@ -2,6 +2,16 @@
 
 ---
 
+## v1.3.2 — 2026-09-11 — Medicines/Inventory Blank Screen Fix
+
+### ✅ Completed
+
+| # | Fix | Category |
+|---|-----|----------|
+| 1 | **Medicines & Inventory page blank screen fixed** — Both pages were calling non-existent endpoints `/medicines/categories` and `/medicines/manufacturers`. These matched the `/medicines/:id` route with `id="categories"`/`"manufacturers"`, which crashed on an invalid Prisma lookup and left the page blank. Corrected to call the real `/categories` and `/manufacturers` endpoints. | 🔴 P0 Bug |
+
+---
+
 ## v1.3.1 — 2026-09-09 — Sales History Printing
 
 ### ✅ Completed
@@ -82,8 +92,13 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1 | **Multi-branch / Multi-store Support** — Separate inventory and accounts per branch | 🔲 Future | Major architectural feature |
-| 2 | **SMS / WhatsApp Reminders** — Send payment reminders to customers with outstanding balance | 🔲 Future | Needs third-party API keys (Twilio / etc.) |
+| 1 | **SMS / WhatsApp Reminders** — Send payment reminders to customers with outstanding balance | 🔲 Future | Needs third-party API keys (Twilio / etc.) |
+
+### Cancelled
+
+| # | Task | Reason |
+|---|------|--------|
+| 1 | **Multi-branch / Multi-store Support** | Not needed by client — single-store app only |
 
 ---
 
