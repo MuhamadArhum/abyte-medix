@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '../../api/client'
@@ -24,11 +24,12 @@ interface Props {
   initialData?: any
   onSuccess: () => void
   onCancel: () => void
+  onPendingChange?: (pending: boolean) => void
 }
 
 const DOSAGE_FORMS = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Cream', 'Ointment', 'Drops', 'Inhaler', 'Patch', 'Suppository', 'Other']
 
-export default function MedicineForm({ initialData, onSuccess, onCancel }: Props) {
+export default function MedicineForm({ initialData, onSuccess, onCancel, onPendingChange }: Props) {
   const isEdit = !!initialData
 
   const [form, setForm] = useState<MedicineFormData>({
@@ -71,6 +72,8 @@ export default function MedicineForm({ initialData, onSuccess, onCancel }: Props
     },
     onError: (err: any) => toast.error(err.response?.data?.message ?? 'Failed to save'),
   })
+
+  useEffect(() => { onPendingChange?.(mutation.isPending) }, [mutation.isPending, onPendingChange])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

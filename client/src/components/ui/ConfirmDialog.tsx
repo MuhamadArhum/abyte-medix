@@ -15,7 +15,7 @@ export default function ConfirmDialog({
   const confirmBg = variant === 'danger' ? 'var(--red-risk)' : 'var(--amber-warn)'
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" footer={
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" preventClose={loading} footer={
       <>
         <button onClick={onClose} disabled={loading} className="btn btn-secondary">
           Cancel

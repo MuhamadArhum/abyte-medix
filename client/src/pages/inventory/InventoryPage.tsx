@@ -96,10 +96,11 @@ export default function InventoryPage() {
 
   const adjOpenRef = useRef(adjOpen)
   adjOpenRef.current = adjOpen
+  const adjPendingRef = useRef(false)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'F4') { e.preventDefault(); setAdjOpen(o => !o) }
-      if (e.key === 'Escape' && adjOpenRef.current) setAdjOpen(false)
+      if (e.key === 'F4') { e.preventDefault(); if (!adjPendingRef.current) setAdjOpen(o => !o) }
+      if (e.key === 'Escape' && adjOpenRef.current && !adjPendingRef.current) setAdjOpen(false)
       if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select() }
     }
     window.addEventListener('keydown', handler)
@@ -146,6 +147,7 @@ export default function InventoryPage() {
     },
     onError: (err: any) => toast.error(err.response?.data?.message ?? 'Adjustment failed'),
   })
+  adjPendingRef.current = adjMutation.isPending
 
   const movements: Movement[] = movData?.data ?? movData ?? []
   const movTotal: number = movData?.total ?? movements.length
@@ -453,6 +455,7 @@ export default function InventoryPage() {
         onClose={() => setAdjOpen(false)}
         title="Stock Adjustment"
         size="sm"
+        preventClose={adjMutation.isPending}
         footer={
           <>
             <button onClick={() => setAdjOpen(false)} className="btn btn-secondary">

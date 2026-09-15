@@ -37,6 +37,7 @@ export default function CustomersPage() {
   const [statusFilter, setStatusFilter] = useState('active')
   const [balanceFilter, setBalanceFilter] = useState('')
   const [addOpen, setAddOpen] = useState(false)
+  const [formPending, setFormPending] = useState(false)
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [ledgerCustomer, setLedgerCustomer] = useState<Customer | null>(null)
   const [deactivateCustomer, setDeactivateCustomer] = useState<Customer | null>(null)
@@ -104,21 +105,21 @@ export default function CustomersPage() {
     {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
-          <button onClick={() => setLedgerCustomer(r)} className="icon-btn" title="Ledger">
+          <button onClick={() => setLedgerCustomer(r)} className="icon-btn" title="Ledger" aria-label="Ledger">
             <BookOpen size={14} />
           </button>
           {canEdit && (
-            <button onClick={() => setEditCustomer(r)} className="icon-btn success" title="Edit">
+            <button onClick={() => setEditCustomer(r)} className="icon-btn success" title="Edit" aria-label="Edit">
               <Edit size={14} />
             </button>
           )}
           {canDeactivate && r.isActive && (
-            <button onClick={() => setDeactivateCustomer(r)} className="icon-btn danger" title="Deactivate">
+            <button onClick={() => setDeactivateCustomer(r)} className="icon-btn danger" title="Deactivate" aria-label="Deactivate">
               <PowerOff size={14} />
             </button>
           )}
           {canDeactivate && !r.isActive && (
-            <button onClick={() => setReactivateCustomer(r)} className="icon-btn" title="Reactivate" style={{ color: '#3E8E5A' }}>
+            <button onClick={() => setReactivateCustomer(r)} className="icon-btn" title="Reactivate" aria-label="Reactivate" style={{ color: '#3E8E5A' }}>
               <Power size={14} />
             </button>
           )}
@@ -186,19 +187,21 @@ export default function CustomersPage() {
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Customer">
+      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Customer" preventClose={formPending}>
         <CustomerForm
           onSuccess={() => { setAddOpen(false); qc.invalidateQueries({ queryKey: ['customers'] }) }}
           onCancel={() => setAddOpen(false)}
+          onPendingChange={setFormPending}
         />
       </Modal>
 
-      <Modal isOpen={!!editCustomer} onClose={() => setEditCustomer(null)} title="Edit Customer">
+      <Modal isOpen={!!editCustomer} onClose={() => setEditCustomer(null)} title="Edit Customer" preventClose={formPending}>
         {editCustomer && (
           <CustomerForm
             initialData={editCustomer}
             onSuccess={() => { setEditCustomer(null); qc.invalidateQueries({ queryKey: ['customers'] }) }}
             onCancel={() => setEditCustomer(null)}
+            onPendingChange={setFormPending}
           />
         )}
       </Modal>

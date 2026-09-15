@@ -24,21 +24,25 @@ const secretsPath = path.join(app.getPath('userData'), 'secrets.json')
 interface AppSecrets {
   jwtSecret: string
   refreshSecret: string
-  licenseSecret: string
 }
+
+// Must stay fixed and identical to the default in server/generate-license.ts —
+// license keys are signed offline against this value, so every install has to
+// verify against the same secret (unlike jwtSecret/refreshSecret, which are
+// per-install runtime secrets and are safe to randomize).
+const LICENSE_SECRET = 'abyte-medix-license-secret-@2025#do-not-share'
 
 function loadOrCreateSecrets(): AppSecrets {
   try {
     if (fs.existsSync(secretsPath)) {
       const s = JSON.parse(fs.readFileSync(secretsPath, 'utf-8')) as AppSecrets
-      if (s.jwtSecret && s.refreshSecret && s.licenseSecret) return s
+      if (s.jwtSecret && s.refreshSecret) return s
     }
   } catch { /* regenerate */ }
 
   const secrets: AppSecrets = {
     jwtSecret: crypto.randomBytes(48).toString('hex'),
     refreshSecret: crypto.randomBytes(48).toString('hex'),
-    licenseSecret: crypto.randomBytes(32).toString('hex'),
   }
   fs.writeFileSync(secretsPath, JSON.stringify(secrets, null, 2), { encoding: 'utf-8', mode: 0o600 })
   return secrets
@@ -323,7 +327,7 @@ function startServer(): Promise<boolean> {
         JWT_EXPIRES_IN: '15m',
         REFRESH_TOKEN_SECRET: secrets.refreshSecret,
         REFRESH_TOKEN_EXPIRES_IN: '7d',
-        LICENSE_SECRET: secrets.licenseSecret,
+        LICENSE_SECRET: LICENSE_SECRET,
       },
       stdio: 'pipe',
     })

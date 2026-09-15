@@ -1115,7 +1115,7 @@ const subtotal = cart.reduce((s, i) => s + i.qty * i.saleRate, 0)
               <input
                 ref={amountPaidRef}
                 type="number"
-                placeholder="Cash received (F6)"
+                placeholder="Cash received (F6) — blank = exact total"
                 value={amountPaid}
                 onChange={e => setAmountPaid(e.target.value)}
                 onKeyDown={e => {

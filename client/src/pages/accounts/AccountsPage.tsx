@@ -203,7 +203,7 @@ export default function AccountsPage() {
       )}
 
       {/* Expense Modal */}
-      <Modal isOpen={expOpen} onClose={() => setExpOpen(false)} title="Add Expense" size="sm"
+      <Modal isOpen={expOpen} onClose={() => setExpOpen(false)} title="Add Expense" size="sm" preventClose={expMutation.isPending}
         footer={<><button className="btn btn-secondary" onClick={() => setExpOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={expMutation.isPending} onClick={() => expMutation.mutate({ ...expForm, amount: parseFloat(expForm.amount) })}>{expMutation.isPending && <Spinner size="sm" />}Add</button></>}>
         <div className="field-group">
           <label className="field-label">Category</label>
@@ -218,7 +218,7 @@ export default function AccountsPage() {
       </Modal>
 
       {/* Income Modal */}
-      <Modal isOpen={incOpen} onClose={() => setIncOpen(false)} title="Add Income" size="sm"
+      <Modal isOpen={incOpen} onClose={() => setIncOpen(false)} title="Add Income" size="sm" preventClose={incMutation.isPending}
         footer={<><button className="btn btn-secondary" onClick={() => setIncOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={incMutation.isPending} onClick={() => incMutation.mutate({ ...incForm, amount: parseFloat(incForm.amount) })}>{incMutation.isPending && <Spinner size="sm" />}Add</button></>}>
         <div className="field-group">
           <label className="field-label">Category</label>
@@ -233,7 +233,7 @@ export default function AccountsPage() {
       </Modal>
 
       {/* Payment Modal */}
-      <Modal isOpen={payOpen} onClose={() => setPayOpen(false)} title="Record Payment" size="sm"
+      <Modal isOpen={payOpen} onClose={() => setPayOpen(false)} title="Record Payment" size="sm" preventClose={payMutation.isPending}
         footer={<><button className="btn btn-secondary" onClick={() => setPayOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={payMutation.isPending} onClick={() => payMutation.mutate({ type: payForm.type, ...(payForm.type === 'CUSTOMER_RECEIPT' ? { customerId: +payForm.entityId } : { supplierId: +payForm.entityId }), amount: parseFloat(payForm.amount), method: payForm.method, notes: payForm.notes || undefined })}>{payMutation.isPending && <Spinner size="sm" />}Record</button></>}>
         <div className="field-group"><label className="field-label">Type</label><select className="field-select" value={payForm.type} onChange={e => setPayForm(p => ({ ...p, type: e.target.value, entityId: '' }))}><option value="CUSTOMER_RECEIPT">Customer Payment Received</option><option value="SUPPLIER_PAYMENT">Supplier Payment Made</option></select></div>
         <div className="field-group"><label className="field-label">{payForm.type === 'CUSTOMER_RECEIPT' ? 'Customer' : 'Supplier'}</label><select className="field-select" value={payForm.entityId} onChange={e => setPayForm(p => ({ ...p, entityId: e.target.value }))}><option value="">Select…</option>{(payForm.type === 'CUSTOMER_RECEIPT' ? custList : supList).map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>

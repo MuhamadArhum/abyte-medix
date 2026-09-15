@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -8,16 +8,21 @@ interface ModalProps {
   children: React.ReactNode
   footer?: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  /** When true, Escape / backdrop-click / the X button cannot close the modal (e.g. while a save request is in flight). */
+  preventClose?: boolean
 }
 
 const sizeMap = { sm: 360, md: 520, lg: 720, xl: 960 }
 
-export default function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', preventClose = false }: ModalProps) {
+  const titleId = useId()
+  const requestClose = () => { if (!preventClose) onClose() }
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose() }
     if (isOpen) document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [isOpen, onClose])
+  }, [isOpen, preventClose, onClose])
 
   if (!isOpen) return null
 
@@ -26,8 +31,11 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
       position: 'fixed', inset: 0, background: 'rgba(27,30,33,0.60)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 50, padding: 16,
-    }} onClick={onClose}>
+    }} onClick={requestClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--paper-light)', borderRadius: 'var(--radius)', width: '100%',
@@ -41,18 +49,18 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 20px', borderBottom: '1px solid var(--rule)', flexShrink: 0,
         }}>
-          <h3 style={{
+          <h3 id={titleId} style={{
             fontFamily: 'var(--font-oswald)', fontWeight: 600, fontSize: 15,
             color: 'var(--blueprint)', textTransform: 'uppercase', letterSpacing: '0.04em',
           }}>
             {title}
           </h3>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
+          <button onClick={requestClose} disabled={preventClose} aria-label="Close dialog" style={{
+            background: 'none', border: 'none', cursor: preventClose ? 'not-allowed' : 'pointer',
             color: 'var(--steel)', padding: 4, borderRadius: 'var(--radius)',
-            display: 'flex', alignItems: 'center',
+            display: 'flex', alignItems: 'center', opacity: preventClose ? 0.4 : 1,
           }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--red-risk)' }}
+            onMouseEnter={(e) => { if (!preventClose) (e.currentTarget as HTMLElement).style.color = 'var(--red-risk)' }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--steel)' }}
           >
             <X size={18} />

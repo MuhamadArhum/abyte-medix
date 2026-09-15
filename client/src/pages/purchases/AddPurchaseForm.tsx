@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Trash2, Search } from 'lucide-react'
@@ -22,9 +22,10 @@ interface PurchaseItem {
 interface Props {
   onSuccess: () => void
   onCancel: () => void
+  onPendingChange?: (pending: boolean) => void
 }
 
-export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
+export default function AddPurchaseForm({ onSuccess, onCancel, onPendingChange }: Props) {
   const [supplierId, setSupplierId] = useState('')
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0])
   const [invoiceNumber, setInvoiceNumber] = useState('')
@@ -92,10 +93,23 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
     onError: (err: any) => toast.error(err.response?.data?.message ?? 'Failed to save purchase'),
   })
 
+  useEffect(() => { onPendingChange?.(mutation.isPending) }, [mutation.isPending, onPendingChange])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!supplierId) { toast.error('Select a supplier'); return }
     if (items.length === 0) { toast.error('Add at least one item'); return }
+
+    const badRow = items.findIndex(i => i.quantity <= 0 || !i.batchNumber.trim())
+    if (badRow !== -1) {
+      const item = items[badRow]
+      toast.error(
+        item.quantity <= 0
+          ? `"${item.medicineName}" needs a quantity greater than 0`
+          : `"${item.medicineName}" needs a batch number`
+      )
+      return
+    }
 
     mutation.mutate({
       supplierId: Number(supplierId),
@@ -201,6 +215,7 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
                         type={f === 'expiryDate' ? 'date' : 'text'}
                         className="border rounded px-1.5 py-1 w-24 text-xs focus:outline-none" style={{ borderColor: 'var(--rule)', background: 'var(--paper)' }}
                         value={item[f]}
+                        placeholder={f === 'batchNumber' ? 'Required' : undefined}
                         onChange={e => updateItem(idx, f, e.target.value)}
                       />
                     </td>
@@ -211,7 +226,7 @@ export default function AddPurchaseForm({ onSuccess, onCancel }: Props) {
                         type="number"
                         className="border rounded px-1.5 py-1 w-16 text-xs text-right focus:outline-none" style={{ borderColor: 'var(--rule)', background: 'var(--paper)' }}
                         value={item[f]}
-                        min={0}
+                        min={f === 'quantity' ? 1 : 0}
                         onChange={e => updateItem(idx, f, Number(e.target.value))}
                       />
                     </td>

@@ -39,9 +39,24 @@ export default function SetupPage() {
   async function handleSave() {
     setError('')
 
-    if (mode === 'lan' && !serverIp.trim()) {
-      setError('Server IP address is required')
-      return
+    if (mode === 'lan') {
+      const ip = serverIp.trim()
+      if (!ip) {
+        setError('Server IP address is required')
+        return
+      }
+      const ipv4Pattern = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
+      const hostnamePattern = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+      if (!ipv4Pattern.test(ip) && !hostnamePattern.test(ip)) {
+        setError('Enter a valid IP address (e.g. 192.168.1.10) or hostname')
+        return
+      }
+
+      const port = Number(serverPort.trim())
+      if (!serverPort.trim() || !Number.isInteger(port) || port < 1 || port > 65535) {
+        setError('Enter a valid port number (1–65535)')
+        return
+      }
     }
 
     setSaving(true)

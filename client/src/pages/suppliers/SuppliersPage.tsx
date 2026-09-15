@@ -37,6 +37,7 @@ export default function SuppliersPage() {
   const [statusFilter, setStatusFilter] = useState('active')
   const [payableFilter, setPayableFilter] = useState('')
   const [addOpen, setAddOpen] = useState(false)
+  const [formPending, setFormPending] = useState(false)
   const [editSupplier, setEditSupplier] = useState<Supplier | null>(null)
   const [ledgerSupplier, setLedgerSupplier] = useState<Supplier | null>(null)
   const [deactivateSupplier, setDeactivateSupplier] = useState<Supplier | null>(null)
@@ -99,21 +100,21 @@ export default function SuppliersPage() {
     {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
-          <button onClick={() => setLedgerSupplier(r)} className="icon-btn" title="Ledger">
+          <button onClick={() => setLedgerSupplier(r)} className="icon-btn" title="Ledger" aria-label="Ledger">
             <BookOpen size={14} />
           </button>
           {canEdit && (
-            <button onClick={() => setEditSupplier(r)} className="icon-btn success" title="Edit">
+            <button onClick={() => setEditSupplier(r)} className="icon-btn success" title="Edit" aria-label="Edit">
               <Edit size={14} />
             </button>
           )}
           {canDelete && r.isActive && (
-            <button onClick={() => setDeactivateSupplier(r)} className="icon-btn danger" title="Deactivate">
+            <button onClick={() => setDeactivateSupplier(r)} className="icon-btn danger" title="Deactivate" aria-label="Deactivate">
               <PowerOff size={14} />
             </button>
           )}
           {canDelete && !r.isActive && (
-            <button onClick={() => setReactivateSupplier(r)} className="icon-btn" title="Reactivate" style={{ color: '#3E8E5A' }}>
+            <button onClick={() => setReactivateSupplier(r)} className="icon-btn" title="Reactivate" aria-label="Reactivate" style={{ color: '#3E8E5A' }}>
               <Power size={14} />
             </button>
           )}
@@ -181,19 +182,21 @@ export default function SuppliersPage() {
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Supplier">
+      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Supplier" preventClose={formPending}>
         <SupplierForm
           onSuccess={() => { setAddOpen(false); qc.invalidateQueries({ queryKey: ['suppliers'] }) }}
           onCancel={() => setAddOpen(false)}
+          onPendingChange={setFormPending}
         />
       </Modal>
 
-      <Modal isOpen={!!editSupplier} onClose={() => setEditSupplier(null)} title="Edit Supplier">
+      <Modal isOpen={!!editSupplier} onClose={() => setEditSupplier(null)} title="Edit Supplier" preventClose={formPending}>
         {editSupplier && (
           <SupplierForm
             initialData={editSupplier}
             onSuccess={() => { setEditSupplier(null); qc.invalidateQueries({ queryKey: ['suppliers'] }) }}
             onCancel={() => setEditSupplier(null)}
+            onPendingChange={setFormPending}
           />
         )}
       </Modal>

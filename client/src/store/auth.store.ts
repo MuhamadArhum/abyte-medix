@@ -13,11 +13,14 @@ interface AuthState {
   user: User | null
   accessToken: string | null
   refreshToken: string | null
+  /** True once the persisted session has been read back from localStorage. */
+  hasHydrated: boolean
   setAuth: (user: User, accessToken: string, refreshToken: string) => void
   setTokens: (accessToken: string, refreshToken: string | null) => void
   logout: () => void
   isAuthenticated: () => boolean
   hasPermission: (module: string, action: string) => boolean
+  setHasHydrated: (v: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -26,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
+      hasHydrated: false,
 
       setAuth: (user, accessToken, refreshToken) =>
         set({ user, accessToken, refreshToken }),
@@ -44,7 +48,15 @@ export const useAuthStore = create<AuthState>()(
         const perm = user.permissions.find((p) => p.module === module && p.action === action)
         return perm?.granted ?? false
       },
+
+      setHasHydrated: (v) => set({ hasHydrated: v }),
     }),
-    { name: 'abyte-auth' },
+    {
+      name: 'abyte-auth',
+      partialize: (s) => ({ user: s.user, accessToken: s.accessToken, refreshToken: s.refreshToken }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    },
   ),
 )

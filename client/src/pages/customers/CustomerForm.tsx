@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '../../api/client'
@@ -8,9 +8,10 @@ interface Props {
   initialData?: any
   onSuccess: () => void
   onCancel: () => void
+  onPendingChange?: (pending: boolean) => void
 }
 
-export default function CustomerForm({ initialData, onSuccess, onCancel }: Props) {
+export default function CustomerForm({ initialData, onSuccess, onCancel, onPendingChange }: Props) {
   const isEdit = !!initialData
   const [form, setForm] = useState({
     name: initialData?.name ?? '',
@@ -31,9 +32,15 @@ export default function CustomerForm({ initialData, onSuccess, onCancel }: Props
     onError: (err: any) => toast.error(err.response?.data?.message ?? 'Failed'),
   })
 
+  useEffect(() => { onPendingChange?.(mutation.isPending) }, [mutation.isPending, onPendingChange])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name) { toast.error('Name is required'); return }
+    if (!form.name.trim()) { toast.error('Name is required'); return }
+    if (form.phone.trim() && !/^[0-9+\-\s()]{7,20}$/.test(form.phone.trim())) {
+      toast.error('Enter a valid phone number'); return
+    }
+    if (Number(form.creditLimit) < 0) { toast.error('Credit limit cannot be negative'); return }
     mutation.mutate({ ...form, creditLimit: Number(form.creditLimit) })
   }
 

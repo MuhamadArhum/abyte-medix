@@ -48,6 +48,7 @@ export default function MedicinesPage() {
   const [prescriptionFilter, setPrescriptionFilter] = useState('')
   const [activeFilter, setActiveFilter] = useState('true')
   const [addOpen, setAddOpen] = useState(false)
+  const [formPending, setFormPending] = useState(false)
   const [editMed, setEditMed] = useState<Medicine | null>(null)
   const [batchMed, setBatchMed] = useState<Medicine | null>(null)
   const [deactivateMed, setDeactivateMed] = useState<Medicine | null>(null)
@@ -139,21 +140,21 @@ export default function MedicinesPage() {
     {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
-          <button onClick={() => setBatchMed(r)} className="icon-btn" title="View Batches">
+          <button onClick={() => setBatchMed(r)} className="icon-btn" title="View Batches" aria-label="View Batches">
             <Eye size={14} />
           </button>
           {canEdit && (
-            <button onClick={() => setEditMed(r)} className="icon-btn success" title="Edit">
+            <button onClick={() => setEditMed(r)} className="icon-btn success" title="Edit" aria-label="Edit">
               <Edit size={14} />
             </button>
           )}
           {canDeactivate && r.isActive && (
-            <button onClick={() => setDeactivateMed(r)} className="icon-btn danger" title="Deactivate">
+            <button onClick={() => setDeactivateMed(r)} className="icon-btn danger" title="Deactivate" aria-label="Deactivate">
               <PowerOff size={14} />
             </button>
           )}
           {canDeactivate && !r.isActive && (
-            <button onClick={() => setReactivateMed(r)} className="icon-btn" title="Reactivate" style={{ color: '#3E8E5A' }}>
+            <button onClick={() => setReactivateMed(r)} className="icon-btn" title="Reactivate" aria-label="Reactivate" style={{ color: '#3E8E5A' }}>
               <Power size={14} />
             </button>
           )}
@@ -251,19 +252,21 @@ export default function MedicinesPage() {
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Medicine" size="lg">
+      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Medicine" size="lg" preventClose={formPending}>
         <MedicineForm
           onSuccess={() => { setAddOpen(false); qc.invalidateQueries({ queryKey: ['medicines'] }) }}
           onCancel={() => setAddOpen(false)}
+          onPendingChange={setFormPending}
         />
       </Modal>
 
-      <Modal isOpen={!!editMed} onClose={() => setEditMed(null)} title="Edit Medicine" size="lg">
+      <Modal isOpen={!!editMed} onClose={() => setEditMed(null)} title="Edit Medicine" size="lg" preventClose={formPending}>
         {editMed && (
           <MedicineForm
             initialData={editMed}
             onSuccess={() => { setEditMed(null); qc.invalidateQueries({ queryKey: ['medicines'] }) }}
             onCancel={() => setEditMed(null)}
+            onPendingChange={setFormPending}
           />
         )}
       </Modal>

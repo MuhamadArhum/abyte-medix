@@ -252,7 +252,7 @@ export default function QuotationsPage() {
               <Trash2 size={13} /> Clear Expired ({expiredCount})
             </button>
           )}
-          <button onClick={() => navigate('/pos')} className="btn btn-primary" style={{ background: C.purple }}>
+          <button onClick={() => navigate('/pos')} className="btn btn-primary">
             <Plus size={14} /> New Quotation
           </button>
         </div>
@@ -371,19 +371,19 @@ export default function QuotationsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <button onClick={() => setSelected(q)} className="icon-btn" title="View Detail" style={{ color: C.purple }}>
+                        <button onClick={() => setSelected(q)} className="icon-btn" title="View Detail" aria-label="View Detail" style={{ color: C.purple }}>
                           <Eye size={14} />
                         </button>
-                        <button onClick={() => printQuotation(q)} disabled={printing} className="icon-btn" title="Print">
+                        <button onClick={() => printQuotation(q)} disabled={printing} className="icon-btn" title="Print" aria-label="Print">
                           <Printer size={14} />
                         </button>
                         {canLoad && !expired && (
-                          <button onClick={() => loadToPOS(q)} className="icon-btn success" title="Load to POS">
+                          <button onClick={() => loadToPOS(q)} className="icon-btn success" title="Load to POS" aria-label="Load to POS">
                             <ShoppingCart size={14} />
                           </button>
                         )}
                         {canDelete && (
-                          <button onClick={() => setDeleteTarget(q)} className="icon-btn danger" title="Delete">
+                          <button onClick={() => setDeleteTarget(q)} className="icon-btn danger" title="Delete" aria-label="Delete">
                             <Trash2 size={14} />
                           </button>
                         )}

@@ -68,7 +68,7 @@ export default function SupplierLedger({ supplier, onClose }: Props) {
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={`Ledger — ${supplier.name}`} size="lg">
+    <Modal isOpen onClose={onClose} title={`Ledger — ${supplier.name}`} size="lg" preventClose={payMutation.isPending}>
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : (

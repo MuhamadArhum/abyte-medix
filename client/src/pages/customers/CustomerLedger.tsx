@@ -69,7 +69,7 @@ export default function CustomerLedger({ customer, onClose }: Props) {
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={`Ledger — ${customer.name}`} size="lg">
+    <Modal isOpen onClose={onClose} title={`Ledger — ${customer.name}`} size="lg" preventClose={payMutation.isPending}>
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : (

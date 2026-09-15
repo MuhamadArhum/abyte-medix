@@ -47,6 +47,7 @@ export default function PurchasesPage() {
   const [status, setStatus] = useState('')
   const [supplierId, setSupplierId] = useState('')
   const [addOpen, setAddOpen] = useState(false)
+  const [formPending, setFormPending] = useState(false)
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -112,7 +113,7 @@ export default function PurchasesPage() {
     { key: 'total', label: 'Total', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Rs. {Number(r.total).toLocaleString()}</span> },
     { key: 'amountPaid', label: 'Paid', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-ok)' }}>Rs. {Number(r.amountPaid).toLocaleString()}</span> },
     {
-      key: 'status', label: 'Balance Due', render: r => {
+      key: 'balanceDue', label: 'Balance Due', render: r => {
         const due = Number(r.total) - Number(r.amountPaid)
         return due > 0
           ? <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--red-risk)', fontWeight: 700 }}>Rs. {due.toLocaleString()}</span>
@@ -201,8 +202,12 @@ export default function PurchasesPage() {
         <Pagination page={page} total={total} limit={limit} onChange={setPage} onLimitChange={l => { setLimit(l); setPage(1) }} />
       </div>
 
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="New Purchase" size="xl">
-        <AddPurchaseForm onSuccess={() => { setAddOpen(false); qc.invalidateQueries({ queryKey: ['purchases'] }) }} onCancel={() => setAddOpen(false)} />
+      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="New Purchase" size="xl" preventClose={formPending}>
+        <AddPurchaseForm
+          onSuccess={() => { setAddOpen(false); qc.invalidateQueries({ queryKey: ['purchases'] }) }}
+          onCancel={() => setAddOpen(false)}
+          onPendingChange={setFormPending}
+        />
       </Modal>
       {viewPurchase && <PurchaseDetailModal purchaseId={viewPurchase.id} onClose={() => setViewPurchase(null)} />}
 

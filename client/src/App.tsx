@@ -25,9 +25,14 @@ import SalesPage from './pages/sales/SalesPage'
 import SetupPage from './pages/setup/SetupPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
   const user = useAuthStore((s) => s.user)
   const location = useLocation()
+
+  // Wait for the persisted session to load from localStorage before deciding —
+  // otherwise a page refresh briefly sees a logged-out state and bounces to /login.
+  if (!hasHydrated) return null
 
   const { data: licenseStatus } = useQuery({
     queryKey: ['license-status'],

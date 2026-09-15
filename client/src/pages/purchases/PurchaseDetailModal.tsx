@@ -73,7 +73,7 @@ export default function PurchaseDetailModal({ purchaseId, onClose }: Props) {
   })
 
   return (
-    <Modal isOpen onClose={onClose} title="Purchase Details" size="xl">
+    <Modal isOpen onClose={onClose} title="Purchase Details" size="xl" preventClose={paymentMutation.isPending || returnMutation.isPending}>
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : purchase ? (

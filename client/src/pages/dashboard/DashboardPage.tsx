@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import { useAuthStore } from '../../store/auth.store'
+import Spinner from '../../components/ui/Spinner'
 import {
   TrendingUp, ShoppingBag, AlertTriangle, Package,
   Banknote, ShieldAlert,
@@ -46,31 +47,33 @@ const td: React.CSSProperties = {
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
 
-  const { data: dash } = useQuery({
+  const { data: dash, isLoading: dashLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.get('/dashboard').then((r) => r.data),
     refetchInterval: 60_000,
   })
 
-  const { data: lowStockData } = useQuery({
+  const { data: lowStockData, isLoading: lowStockLoading } = useQuery({
     queryKey: ['low-stock'],
     queryFn: () => api.get('/medicines/low-stock').then((r) => r.data),
   })
 
-  const { data: expiring } = useQuery({
+  const { data: expiring, isLoading: expiringLoading } = useQuery({
     queryKey: ['expiring'],
     queryFn: () => api.get('/medicines/expiring?days=60').then((r) => r.data),
   })
 
-  const { data: recentSalesData } = useQuery({
+  const { data: recentSalesData, isLoading: salesLoading } = useQuery({
     queryKey: ['recent-sales'],
     queryFn: () => api.get('/sales?page=1&limit=5').then((r) => r.data),
   })
 
-  const { data: recentPurchasesData } = useQuery({
+  const { data: recentPurchasesData, isLoading: purchasesLoading } = useQuery({
     queryKey: ['recent-purchases'],
     queryFn: () => api.get('/purchases?page=1&limit=5').then((r) => r.data),
   })
+
+  const isLoading = dashLoading || lowStockLoading || expiringLoading || salesLoading || purchasesLoading
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -90,6 +93,10 @@ export default function DashboardPage() {
         {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
       </div>
 
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spinner /></div>
+      ) : (
+      <>
       {/* Stat Cards */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 22 }}>
         <StatCard icon={Banknote}    label="Today's sales"       value={fmtRs(dash?.todaySales?.total ?? 0)} />
@@ -218,6 +225,8 @@ export default function DashboardPage() {
         </div>
 
       </div>
+      </>
+      )}
     </div>
   )
 }

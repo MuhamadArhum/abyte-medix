@@ -121,20 +121,20 @@ export default function UsersPage() {
       key: 'actions', label: 'Actions', render: r => (
         <div className="flex items-center gap-1">
           <button onClick={() => { setEditUser(r); setEditForm({ fullName: r.fullName, role: r.role, isActive: r.isActive }) }}
-            className="icon-btn success" title="Edit">
+            className="icon-btn success" title="Edit" aria-label="Edit">
             <Edit size={14} />
           </button>
           <button onClick={() => { setResetUser(r); setNewPwd('') }}
-            className="icon-btn" title="Reset Password" style={{ color: 'var(--amber-warn)' }}>
+            className="icon-btn" title="Reset Password" aria-label="Reset Password" style={{ color: 'var(--amber-warn)' }}>
             <Key size={14} />
           </button>
           <button onClick={() => openPermModal(r)}
-            className="icon-btn" title="Permissions">
+            className="icon-btn" title="Permissions" aria-label="Permissions">
             <Shield size={14} />
           </button>
           {r.role !== 'ADMIN' && (
             <button onClick={() => setDeleteUser(r)}
-              className="icon-btn danger" title="Delete User">
+              className="icon-btn danger" title="Delete User" aria-label="Delete User">
               <Trash2 size={14} />
             </button>
           )}
@@ -163,27 +163,37 @@ export default function UsersPage() {
       </div>
 
       {/* Add User */}
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add User" size="sm"
+      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add User" size="sm" preventClose={addMutation.isPending}
         footer={
           <>
             <button className="btn btn-secondary" onClick={() => setAddOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={() => addMutation.mutate(addForm)} disabled={addMutation.isPending}>
+            <button className="btn btn-primary" onClick={() => {
+              if (!addForm.username.trim() || !addForm.fullName.trim() || !addForm.password.trim()) {
+                toast.error('Username, full name and password are required')
+                return
+              }
+              if (addForm.password.length < 8) {
+                toast.error('Password must be at least 8 characters')
+                return
+              }
+              addMutation.mutate(addForm)
+            }} disabled={addMutation.isPending}>
               {addMutation.isPending && <Spinner size="sm" />} Create User
             </button>
           </>
         }
       >
         <div className="field-group">
-          <label className="field-label">Username</label>
-          <input className="field-input" value={addForm.username} onChange={e => setAddForm(p => ({ ...p, username: e.target.value }))} />
+          <label className="field-label">Username *</label>
+          <input className="field-input" value={addForm.username} onChange={e => setAddForm(p => ({ ...p, username: e.target.value }))} required />
         </div>
         <div className="field-group">
-          <label className="field-label">Full Name</label>
-          <input className="field-input" value={addForm.fullName} onChange={e => setAddForm(p => ({ ...p, fullName: e.target.value }))} />
+          <label className="field-label">Full Name *</label>
+          <input className="field-input" value={addForm.fullName} onChange={e => setAddForm(p => ({ ...p, fullName: e.target.value }))} required />
         </div>
         <div className="field-group">
-          <label className="field-label">Password</label>
-          <input type="password" className="field-input" value={addForm.password} onChange={e => setAddForm(p => ({ ...p, password: e.target.value }))} />
+          <label className="field-label">Password *</label>
+          <input type="password" className="field-input" value={addForm.password} onChange={e => setAddForm(p => ({ ...p, password: e.target.value }))} placeholder="Min 8 characters" required />
         </div>
         <div className="field-group">
           <label className="field-label">Role</label>
@@ -194,7 +204,7 @@ export default function UsersPage() {
       </Modal>
 
       {/* Edit User */}
-      <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} title="Edit User" size="sm"
+      <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} title="Edit User" size="sm" preventClose={editMutation.isPending}
         footer={
           <>
             <button className="btn btn-secondary" onClick={() => setEditUser(null)}>Cancel</button>
@@ -236,7 +246,7 @@ export default function UsersPage() {
       </Modal>
 
       {/* Reset Password */}
-      <Modal isOpen={!!resetUser} onClose={() => setResetUser(null)} title={`Reset Password — ${resetUser?.username}`} size="sm"
+      <Modal isOpen={!!resetUser} onClose={() => setResetUser(null)} title={`Reset Password — ${resetUser?.username}`} size="sm" preventClose={resetMutation.isPending}
         footer={
           <>
             <button className="btn btn-secondary" onClick={() => setResetUser(null)}>Cancel</button>
@@ -268,7 +278,7 @@ export default function UsersPage() {
       />
 
       {/* Permissions Modal */}
-      <Modal isOpen={!!permUser} onClose={() => setPermUser(null)} title={`Permissions — ${permUser?.fullName}`} size="lg"
+      <Modal isOpen={!!permUser} onClose={() => setPermUser(null)} title={`Permissions — ${permUser?.fullName}`} size="lg" preventClose={permMutation.isPending}
         footer={
           <>
             <button className="btn btn-secondary" onClick={() => setPermUser(null)}>Cancel</button>

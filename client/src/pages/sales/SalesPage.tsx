@@ -397,7 +397,7 @@ export default function SalesPage() {
     )},
     { key: 'user', label: 'By', render: r => <span style={{ fontSize: 11.5, color: C.faint }}>{r.user?.fullName ?? '—'}</span> },
     { key: 'actions', label: '', render: r => (
-      <button onClick={() => setViewSaleId(r.id)} className="icon-btn" title="View"
+      <button onClick={() => setViewSaleId(r.id)} className="icon-btn" title="View" aria-label="View"
         onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--orange)' }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--steel)' }}>
         <Eye size={14} />
